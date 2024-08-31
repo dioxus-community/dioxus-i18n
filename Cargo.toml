@@ -1,0 +1,9 @@
+[package]
+name = "dioxus-i18n"
+version = "0.1.0"
+edition = "2021"
+authors = ["Marc Espín <mespinsanz@gmail.com>"]
+description = "i18n integration for Dioxus apps."
+license = "MIT"
+repository = "https://github.com/dioxus-community/dioxus-free-icons"
+readme = "./README.md"
