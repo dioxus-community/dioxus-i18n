@@ -1,111 +1,130 @@
-use dioxus_lib::{
-    prelude::consume_context,
-    signals::{Readable, Signal, Writable},
-};
-use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, str::FromStr};
+use dioxus_lib::prelude::*;
+use fluent::{FluentArgs, FluentBundle, FluentResource};
+
 use unic_langid::LanguageIdentifier;
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize)]
-pub struct Language {
+pub struct Locale {
     id: LanguageIdentifier,
-    texts: Text,
+    resource: LocaleResource,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(untagged)]
-pub enum Text {
-    Value(String),
-    Texts(HashMap<String, Text>),
-}
-
-impl Default for Text {
-    fn default() -> Self {
-        Self::Texts(HashMap::default())
+impl Locale {
+    pub fn new_static(id: LanguageIdentifier, str: &'static str) -> Self {
+        Self {
+            id,
+            resource: LocaleResource::Static(str),
+        }
     }
 }
 
-impl Text {
-    fn query(&self, steps: &mut Vec<&str>) -> Option<String> {
+pub enum LocaleResource {
+    Static(&'static str),
+    // TODO: File
+}
+
+impl LocaleResource {
+    pub fn as_str(&self) -> &str {
         match self {
-            Text::Texts(texts) => {
-                if steps.is_empty() {
-                    return None;
+            Self::Static(str) => str,
+        }
+    }
+}
+
+pub struct I18nConfig {
+    id: LanguageIdentifier,
+    fallback: Option<LanguageIdentifier>,
+    locales: Vec<Locale>,
+}
+
+impl I18nConfig {
+    /// Create an i18n config with the selected [LanguageIdentifier].
+    pub fn new(id: LanguageIdentifier) -> Self {
+        Self {
+            id,
+            fallback: None,
+            locales: Vec::new(),
+        }
+    }
+
+    /// Set a fallback [LanguageIdentifier].
+    pub fn with_fallback(mut self, fallback: LanguageIdentifier) -> Self {
+        self.fallback = Some(fallback);
+        self
+    }
+
+    /// Add [Locale].
+    pub fn with_locale(mut self, locale: Locale) -> Self {
+        self.locales.push(locale);
+        self
+    }
+}
+
+/// Initialize an i18n provider.
+pub fn use_init_i18n(init: impl FnOnce() -> I18nConfig) -> I18n {
+    use_context_provider(move || {
+        let I18nConfig {
+            id,
+            fallback,
+            locales,
+        } = init();
+
+        let bundles = locales
+            .into_iter()
+            .map(|Locale { id, resource }| {
+                let mut bundle = FluentBundle::new(vec![id]);
+                let resource = FluentResource::try_new(resource.as_str().to_string())
+                    .expect("Failed to ceate Resource.");
+                bundle
+                    .add_resource(resource)
+                    .expect("Failed to add resource.");
+                bundle
+            })
+            .collect::<Vec<FluentBundle<FluentResource>>>();
+
+        I18n {
+            selected_language: Signal::new(id),
+            fallback_language: Signal::new(fallback),
+            bundles: Signal::new(bundles),
+        }
+    })
+}
+
+#[derive(Clone, Copy)]
+pub struct I18n {
+    selected_language: Signal<LanguageIdentifier>,
+    fallback_language: Signal<Option<LanguageIdentifier>>,
+    bundles: Signal<Vec<FluentBundle<FluentResource>>>,
+}
+
+impl I18n {
+    pub fn translate_with_args(&self, msg: &str, args: Option<&FluentArgs>) -> String {
+        let bundles = self.bundles.read();
+
+        let Some(bundle) = bundles
+            .iter()
+            .find(|bundle| bundle.locales.contains(&*self.selected_language.read()))
+            .or_else(|| {
+                if let Some(fcb) = &*self.fallback_language.read() {
+                    bundles.iter().find(|bundle| bundle.locales.contains(fcb))
+                } else {
+                    None
                 }
+            })
+        else {
+            return msg.to_owned();
+        };
 
-                let current_path = steps.join(".");
+        let message = bundle.get_message(msg).expect("Failed to get message.");
+        let pattern = message.value().expect("Failed to get the message pattern.");
+        let mut errors = vec![];
 
-                // Try querying the next step in this list
-                let this_step = steps.remove(0);
-                let deep = texts.get(this_step)?;
-                let res = deep.query(steps);
-
-                // If not found try querying by the whole remaining path as if it was the ID
-                if res.is_none() {
-                    let res_text = texts.get(&current_path);
-                    if let Some(res_text) = res_text {
-                        return res_text.query(steps);
-                    }
-                }
-                res
-            }
-            Text::Value(value) => Some(value.to_owned()),
-        }
-    }
-}
-
-impl FromStr for Language {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        serde_json::from_str(s).map_err(|_| ())
-    }
-}
-
-impl Language {
-    pub fn get_text(&self, path: &str, params: HashMap<&str, String>) -> Option<String> {
-        let mut steps = path.split('.').collect::<Vec<&str>>();
-
-        let mut text = self.texts.query(&mut steps).unwrap_or_default();
-
-        for (name, value) in params {
-            text = text.replacen(&format!("{{{name}}}"), &value.to_string(), 1);
-        }
-        Some(text)
-    }
-}
-
-#[derive(Clone, PartialEq, Copy)]
-pub struct UseI18 {
-    pub selected_language: Signal<LanguageIdentifier>,
-    pub fallback_language: Signal<LanguageIdentifier>,
-    pub(crate) languages: Signal<Vec<Language>>,
-}
-
-impl UseI18 {
-    /// Translate the given text ID with the specified params.
-    pub fn translate_with_params(&self, id: &str, params: HashMap<&str, String>) -> String {
-        // Try searching in the selected language
-        for language in self.languages.read().iter() {
-            if language.id == *self.selected_language.read() {
-                return language.get_text(id, params).unwrap_or_default();
-            }
-        }
-
-        // Otherwise find in the fallback language
-        for language in self.languages.read().iter() {
-            if language.id == *self.fallback_language.read() {
-                return language.get_text(id, params).unwrap_or_default();
-            }
-        }
-
-        // Return the ID as there is no alternative
-        id.to_string()
+        bundle
+            .format_pattern(pattern, args, &mut errors)
+            .to_string()
     }
 
-    /// Translate the given text ID with no params.
-    pub fn translate(&self, id: &str) -> String {
-        self.translate_with_params(id, HashMap::default())
+    pub fn translate(&self, msg: &str) -> String {
+        self.translate_with_args(msg, None)
     }
 
     /// Get the selected language.
@@ -114,7 +133,7 @@ impl UseI18 {
     }
 
     /// Get the fallback language.
-    pub fn fallback_language(&mut self) -> LanguageIdentifier {
+    pub fn fallback_language(&mut self) -> Option<LanguageIdentifier> {
         self.fallback_language.read().clone()
     }
 
@@ -125,10 +144,10 @@ impl UseI18 {
 
     /// Update the fallback language.
     pub fn set_fallback_language(&mut self, id: LanguageIdentifier) {
-        *self.fallback_language.write() = id;
+        *self.fallback_language.write() = Some(id);
     }
 }
 
-pub fn use_i18() -> UseI18 {
+pub fn use_i18n() -> I18n {
     consume_context()
 }

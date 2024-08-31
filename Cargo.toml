@@ -1,19 +1,20 @@
 [package]
 name = "dioxus-i18n"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Marc Espín <mespinsanz@gmail.com>"]
-description = "i18n integration for Dioxus apps."
+description = "i18n integration for Dioxus apps based on Fluent Project."
 license = "MIT"
 repository = "https://github.com/dioxus-community/dioxus-i18n"
 readme = "./README.md"
+categories = ["accessibility", "gui", "localization", "internationalization"]
 
 [dependencies]
 dioxus-lib = { version = "0.5", default-features = false, features = ["hooks", "macro", "signals"] }
-serde = { version = "1.0.209", features = ["derive"] }
-serde_json = "1.0.127"
+fluent = "0.16.1"
 unic-langid =  { version = "0.9.5", features = ["serde"] }
 
 [dev-dependencies]
 dioxus = { version = "0.5", features = ["desktop"] }
 freya = "0.2"
+unic-langid =  { version = "0.9.5", features = ["macros"] }

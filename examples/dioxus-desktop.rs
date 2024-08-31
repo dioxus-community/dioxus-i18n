@@ -1,20 +1,17 @@
 use dioxus::prelude::*;
 use dioxus_i18n::{prelude::*, translate};
-use std::str::FromStr;
+use unic_langid::langid;
 
 fn main() {
     launch(app);
 }
 
-static EN_US: &str = include_str!("./en-US.json");
-static ES_ES: &str = include_str!("./es-ES.json");
-
 #[allow(non_snake_case)]
 fn Body() -> Element {
-    let mut i18 = use_i18();
+    let mut i18n = use_i18n();
 
-    let change_to_english = move |_| i18.set_language("en-US".parse().unwrap());
-    let change_to_spanish = move |_| i18.set_language("es-ES".parse().unwrap());
+    let change_to_english = move |_| i18n.set_language(langid!("en-US"));
+    let change_to_spanish = move |_| i18n.set_language(langid!("es-ES"));
 
     rsx!(
         button {
@@ -29,16 +26,22 @@ fn Body() -> Element {
                 "Spanish"
             }
         }
-        p { {translate!(i18, "messages.hello_world")} }
-        p { {translate!(i18, "messages.hello", name: "Dioxus")}  }
+        p { {translate!(i18n, "hello_world")} }
+        p { {translate!(i18n, "hello", name: "Dioxus")}  }
     )
 }
 
 fn app() -> Element {
-    use_init_i18n("en-US".parse().unwrap(), "en-US".parse().unwrap(), || {
-        let en_us = Language::from_str(EN_US).unwrap();
-        let es_es = Language::from_str(ES_ES).unwrap();
-        vec![en_us, es_es]
+    use_init_i18n(|| {
+        I18nConfig::new(langid!("en-US"))
+            .with_locale(Locale::new_static(
+                langid!("en-US"),
+                include_str!("./en-US.ftl"),
+            ))
+            .with_locale(Locale::new_static(
+                langid!("es-ES"),
+                include_str!("./es-ES.ftl"),
+            ))
     });
 
     rsx!(Body {})

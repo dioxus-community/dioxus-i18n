@@ -1,18 +1,18 @@
 #[macro_export]
 macro_rules! translate {
-    ( $i18:expr, $id:expr, $( $name:ident : $value:expr ),* ) => {
+    ( $i18n:expr, $id:expr, $( $name:ident : $value:expr ),* ) => {
         {
-            let mut params_map = std::collections::HashMap::new();
+            let mut params_map = fluent::FluentArgs::new();
             $(
-                params_map.insert(stringify!($name), $value.to_string());
+                params_map.set(stringify!($name), $value);
             )*
-            $i18.translate_with_params($id, params_map)
+            $i18n.translate_with_args($id, Some(&params_map))
         }
     };
 
-    ( $i18:expr, $id:expr ) => {
+    ( $i18n:expr, $id:expr ) => {
         {
-            $i18.translate($id)
+            $i18n.translate($id)
         }
     };
 }
