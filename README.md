@@ -2,6 +2,8 @@
 
 i18n integration for Dioxus apps.
 
+> This feature used to be in the [Dioxus SDK](https://github.com/DioxusLabs/sdk).
+
 ## Support
 
 - **Dioxus v0.5** 🧬
