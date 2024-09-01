@@ -2,7 +2,7 @@
 macro_rules! translate {
     ( $i18n:expr, $id:expr, $( $name:ident : $value:expr ),* ) => {
         {
-            let mut params_map = fluent::FluentArgs::new();
+            let mut params_map = dioxus_i18n::fluent::FluentArgs::new();
             $(
                 params_map.set(stringify!($name), $value);
             )*

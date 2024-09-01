@@ -43,10 +43,15 @@ fn Body() -> Element {
 
 fn app() -> Element {
     use_init_i18n(|| {
-        I18nConfig::new(langid!("en-US")).with_locale(Locale::new_static(
-            langid!("en-US"),
-            include_str!("./en-US.ftl"),
-        ))
+        I18nConfig::new(langid!("en-US"))
+            .with_locale(Locale::new_static(
+                langid!("en-US"),
+                include_str!("./en-US.ftl"),
+            ))
+            .with_locale(Locale::new_static(
+                langid!("es-ES"),
+                include_str!("./es-ES.ftl"),
+            ))
     });
 
     rsx!(Body {})
