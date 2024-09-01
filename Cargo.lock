@@ -1479,7 +1479,7 @@ dependencies = [
 
 [[package]]
 name = "dioxus-i18n"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "dioxus",
  "dioxus-lib",
@@ -6173,7 +6173,6 @@ version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0a5422c1f65949306c99240b81de9f3f15929f5a8bfe05bb44b034cc8bf593e5"
 dependencies = [
- "serde",
  "tinystr",
 ]
 
