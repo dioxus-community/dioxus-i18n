@@ -24,9 +24,13 @@ hello = Hello, {$name}!
 fn app() -> Element {
     let i18 = use_init_i18n(|| {
         I18nConfig::new(langid!("en-US"))
-            .with_locale(Locale::new_static(
+            .with_locale(Locale::new_static( // Embed
                 langid!("en-US"),
                 include_str!("./en-US.ftl"),
+            ))
+            .with_locale(Locale::new_dynamic( // Load at launch
+                langid!("es-ES"),
+                include_str!("./es-ES.ftl"),
             ))
     });
 
