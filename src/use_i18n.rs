@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use dioxus_lib::prelude::*;
 use fluent::{FluentArgs, FluentBundle, FluentResource};
 
@@ -15,17 +17,27 @@ impl Locale {
             resource: LocaleResource::Static(str),
         }
     }
+
+    pub fn new_dynamic(id: LanguageIdentifier, path: impl Into<PathBuf>) -> Self {
+        Self {
+            id,
+            resource: LocaleResource::Path(path.into()),
+        }
+    }
 }
 
 pub enum LocaleResource {
     Static(&'static str),
-    // TODO: File
+    Path(PathBuf),
 }
 
 impl LocaleResource {
-    pub fn as_str(&self) -> &str {
+    pub fn to_string(&self) -> String {
         match self {
-            Self::Static(str) => str,
+            Self::Static(str) => str.to_string(),
+            Self::Path(path) => {
+                std::fs::read_to_string(path).expect("Failed to read locale resource")
+            }
         }
     }
 }
@@ -72,7 +84,7 @@ pub fn use_init_i18n(init: impl FnOnce() -> I18nConfig) -> I18n {
             .into_iter()
             .map(|Locale { id, resource }| {
                 let mut bundle = FluentBundle::new(vec![id]);
-                let resource = FluentResource::try_new(resource.as_str().to_string())
+                let resource = FluentResource::try_new(resource.to_string())
                     .expect("Failed to ceate Resource.");
                 bundle
                     .add_resource(resource)

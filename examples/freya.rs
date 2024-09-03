@@ -48,9 +48,9 @@ fn app() -> Element {
                 langid!("en-US"),
                 include_str!("./en-US.ftl"),
             ))
-            .with_locale(Locale::new_static(
+            .with_locale(Locale::new_dynamic(
                 langid!("es-ES"),
-                include_str!("./es-ES.ftl"),
+                "./examples/es-ES.ftl",
             ))
     });
 

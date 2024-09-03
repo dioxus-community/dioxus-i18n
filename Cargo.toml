@@ -1,6 +1,6 @@
 [package]
 name = "dioxus-i18n"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 authors = ["Marc Espín <mespinsanz@gmail.com>"]
 description = "i18n integration for Dioxus apps based on Fluent Project."
