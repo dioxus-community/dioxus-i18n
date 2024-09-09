@@ -1479,7 +1479,7 @@ dependencies = [
 
 [[package]]
 name = "dioxus-i18n"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "dioxus",
  "dioxus-lib",

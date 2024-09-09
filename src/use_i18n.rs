@@ -18,6 +18,7 @@ impl Locale {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new_dynamic(id: LanguageIdentifier, path: impl Into<PathBuf>) -> Self {
         Self {
             id,
@@ -36,6 +37,9 @@ impl LocaleResource {
         match self {
             Self::Static(str) => str.to_string(),
             Self::Path(path) => {
+                #[cfg(target_arch = "wasm32")]
+                unreachable!("Dynamic locales are not supported in WASM");
+                #[cfg(not(target_arch = "wasm32"))]
                 std::fs::read_to_string(path).expect("Failed to read locale resource")
             }
         }
