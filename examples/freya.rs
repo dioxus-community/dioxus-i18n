@@ -3,7 +3,7 @@
     windows_subsystem = "windows"
 )]
 
-use dioxus_i18n::{prelude::*, translate};
+use dioxus_i18n::{prelude::*, t};
 use freya::prelude::*;
 use unic_langid::langid;
 
@@ -13,7 +13,7 @@ fn main() {
 
 #[allow(non_snake_case)]
 fn Body() -> Element {
-    let mut i18n = use_i18n();
+    let mut i18n = i18n();
 
     let change_to_english = move |_| i18n.set_language(langid!("en-US"));
     let change_to_spanish = move |_| i18n.set_language(langid!("es-ES"));
@@ -35,8 +35,8 @@ fn Body() -> Element {
                     }
                 }
             }
-
-            label { {translate!(i18n, "hello", name: "Dioxus")} }
+            label { { t!("hello_world") } }
+            label { { t!("hello", name: "Dioxus") } }
         }
     )
 }

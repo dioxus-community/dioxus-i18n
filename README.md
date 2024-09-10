@@ -35,7 +35,7 @@ fn app() -> Element {
     });
 
     rsx!(
-        label { {translate!(i18, "hello", name: "World")} }
+        label { { t!("hello", name: "World") } }
     )
 }
 ```

@@ -164,6 +164,6 @@ impl I18n {
     }
 }
 
-pub fn use_i18n() -> I18n {
+pub fn i18n() -> I18n {
     consume_context()
 }

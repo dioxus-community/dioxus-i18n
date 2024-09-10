@@ -1,4 +1,4 @@
-pub mod tanslate;
+pub mod i18n_macro;
 pub mod use_i18n;
 
 pub use fluent;
