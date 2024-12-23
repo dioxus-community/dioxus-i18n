@@ -7,7 +7,7 @@ i18n integration for Dioxus apps based on the [Project Fluent](https://github.co
 ## Support
 
 - **Dioxus v0.6** 🧬
-- All renderers ([web](https://dioxuslabs.com/learn/0.5/getting_started/wasm), [desktop](https://dioxuslabs.com/learn/0.5/getting_started/desktop), etc), [freya](https://github.com/marc2332/freya) doesn't support Dioxus 0.6 yet.
+- All renderers ([web](https://dioxuslabs.com/learn/0.6/guides/web/), [desktop](https://dioxuslabs.com/learn/0.6/guides/desktop/), [freya](https://github.com/marc2332/freya) doesn't support Dioxus 0.6 yet.
 - Both WASM and native targets
 
 ## Example:

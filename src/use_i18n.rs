@@ -136,6 +136,7 @@ impl I18n {
         let pattern = message
             .value()
             .unwrap_or_else(|| panic!("Failed to get the message: `{}` pattern.", msg));
+        
         let mut errors = vec![];
 
         bundle
