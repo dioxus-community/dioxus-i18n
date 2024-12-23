@@ -130,12 +130,10 @@ impl I18n {
             return msg.to_owned();
         };
 
-        let message = bundle.get_message(msg);
-        if message.is_none() {
+        let Some(message) = bundle.get_message(msg) else {
             return msg.to_string();
-        }
+        };
         let pattern = message
-            .unwrap()
             .value()
             .unwrap_or_else(|| panic!("Failed to get the message: `{}` pattern.", msg));
         let mut errors = vec![];
