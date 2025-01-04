@@ -7,7 +7,7 @@
 use dioxus::{dioxus_core::NoOpMutations, prelude::*};
 use futures::FutureExt;
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
 pub(crate) fn test_hook<V: 'static>(
     initialize: impl FnMut() -> V + 'static,
@@ -38,10 +38,10 @@ pub(crate) fn test_hook<V: 'static>(
         props: MockAppComponent<I, C>,
     ) -> Element {
         let value = props.hook.borrow_mut()();
+
         let mut assertions = Assertions::new();
 
         props.check.borrow_mut()(value, &mut assertions);
-        assertions.exit_on_errors();
 
         rsx! { div {} }
     }
@@ -64,32 +64,22 @@ pub(crate) fn test_hook<V: 'static>(
 }
 
 #[derive(Debug)]
-pub(crate) struct Assertions {
-    assertions: Vec<(String, String, String)>,
-}
+pub(crate) struct Assertions {}
 
 impl Assertions {
     pub fn new() -> Self {
-        Self {
-            assertions: Vec::new(),
-        }
+        Self {}
     }
 
-    pub fn assert(&mut self, actual: &str, expected: &str, id: &str) {
-        self.assertions
-            .push((actual.into(), expected.into(), id.into()));
-    }
-
-    pub fn exit_on_errors(&self) {
-        let failures = self
-            .assertions
-            .iter()
-            .filter_map(|(actual, expected, id)| {
-                (actual != expected).then_some((id.to_uppercase(), actual, expected))
-            })
-            .collect::<Vec<_>>();
-        if !failures.is_empty() {
-            eprintln!("***** ERRORS:\n{:#?}*****\n", failures);
+    pub fn assert<T>(&mut self, actual: T, expected: T, id: &str)
+    where
+        T: PartialEq + Debug,
+    {
+        if actual != expected {
+            eprintln!(
+                "***** ERROR in {}: actual: '{:?}' != expected: '{:?}' *****\n",
+                id, actual, expected
+            );
             std::process::exit(-1);
         };
     }

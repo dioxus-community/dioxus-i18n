@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.5.0]
+
+### Added
+
+- New crate feature `legacy_panic_methods` (see below).
+
+- New methods returning Result<_, Error> rather than panic!.
+
+  - `LocaleResource::try_to_resource_string` replacing `LocaleResource::to_resource_string`
+  - `I18n::try_translate` replacing `I18n::translate`
+  - `I18n::try_translate_with_args` replacing `I18n::translate_with_args`
+
+- __Note:__ legacy panic! methods (mainly `translate` and `translate_with_args`) can be enabled
+  with the `legacy_panic_methods` feature, but they are marked `deprecated` and will, nevertheless,
+  produce a warning in client code.
+
+- New `te!` macro which acts like `t!` but returns `Error`.
+
+- New `tid!` macro which acts like `t!` but returns the message-id.
+
+- Added `try_use_init_i18n`. This does _not_ replace `use_init_i18n`, which remains in the default build.
+
+### Change
+
+- t! macro amended to use `try_translate` and `try_translate_with_args`, but will perform `.expect("..")`
+  and therefore panic! on error. This retains backwards compatibility for this macro.
+
+- Use of `set_fallback_language` / `try_set_fallback_language` without a corresponding locale
+  translation is treated as an error.
+
+- Corrected `deprecated(since)` versions to version at which they were deprecated, not previous release.
+
 ## [0.4.0]
 
 ### Added

@@ -1,3 +1,5 @@
+use super::error::Error;
+
 use dioxus_lib::prelude::*;
 use fluent::{FluentArgs, FluentBundle, FluentResource};
 use unic_langid::LanguageIdentifier;
@@ -16,7 +18,7 @@ pub struct Locale {
 
 impl Locale {
     #[deprecated(
-        since = "0.3.0",
+        since = "0.4.0",
         note = "remove `Locale::new_static` and use `(lang_id, a_str)` directly"
     )]
     pub fn new_static(id: LanguageIdentifier, str: &'static str) -> Self {
@@ -27,7 +29,7 @@ impl Locale {
     }
 
     #[deprecated(
-        since = "0.3.0",
+        since = "0.4.0",
         note = "remove `Locale::new_dynamic` and use `(lang_id, a_pathbuf)` directly"
     )]
     #[cfg(not(target_arch = "wasm32"))]
@@ -59,14 +61,20 @@ pub enum LocaleResource {
 }
 
 impl LocaleResource {
-    pub fn to_resource_string(&self) -> String {
+    pub fn try_to_resource_string(&self) -> Result<String, Error> {
         match self {
-            Self::Static(str) => str.to_string(),
+            Self::Static(str) => Ok(str.to_string()),
             #[cfg(not(target_arch = "wasm32"))]
-            Self::Path(path) => {
-                std::fs::read_to_string(path).expect("Failed to read locale resource")
-            }
+            Self::Path(path) => std::fs::read_to_string(path)
+                .map_err(|e| Error::LocaleResourcePathReadFailed(e.to_string())),
         }
+    }
+
+    #[cfg(feature = "legacy_panic_methods")]
+    #[deprecated(since = "0.5.0", note = "use `try_to_resource_string()` instead")]
+    pub fn to_resource_string(&self) -> String {
+        let result = self.try_to_resource_string();
+        result.expect("failed to create LocaleResource")
     }
 }
 
@@ -144,6 +152,21 @@ impl I18nConfig {
 }
 
 /// Initialize an i18n provider.
+pub fn try_use_init_i18n(init: impl FnOnce() -> I18nConfig) -> Result<I18n, Error> {
+    use_context_provider(move || {
+        // Coverage false -ve: See https://github.com/xd009642/tarpaulin/issues/1675
+        let I18nConfig {
+            id,
+            fallback,
+            locale_resources,
+            locales,
+        } = init();
+
+        I18n::try_new(id, fallback, locale_resources, locales)
+    })
+}
+
+/// Initialize an i18n provider.
 pub fn use_init_i18n(init: impl FnOnce() -> I18nConfig) -> I18n {
     use_context_provider(move || {
         // Coverage false -ve: See https://github.com/xd009642/tarpaulin/issues/1675
@@ -154,7 +177,10 @@ pub fn use_init_i18n(init: impl FnOnce() -> I18nConfig) -> I18n {
             locales,
         } = init();
 
-        I18n::new(id, fallback, locale_resources, locales)
+        match I18n::try_new(id, fallback, locale_resources, locales) {
+            Ok(i18n) => i18n,
+            Err(e) => panic!("Failed to create I18n context: {}", e),
+        }
     })
 }
 
@@ -168,45 +194,90 @@ pub struct I18n {
 }
 
 impl I18n {
+    pub fn try_new(
+        selected_language: LanguageIdentifier,
+        fallback_language: Option<LanguageIdentifier>,
+        locale_resources: Vec<LocaleResource>,
+        locales: HashMap<LanguageIdentifier, usize>,
+    ) -> Result<Self, Error> {
+        let bundle = try_create_bundle(
+            &selected_language,
+            &fallback_language,
+            &locale_resources,
+            &locales,
+        )?;
+        Ok(Self {
+            selected_language: Signal::new(selected_language),
+            fallback_language: Signal::new(fallback_language),
+            locale_resources: Signal::new(locale_resources),
+            locales: Signal::new(locales),
+            active_bundle: Signal::new(bundle),
+        })
+    }
+
+    #[cfg(feature = "legacy_panic_methods")]
+    #[deprecated(since = "0.5.0", note = "use `try_new()` instead")]
     pub fn new(
         selected_language: LanguageIdentifier,
         fallback_language: Option<LanguageIdentifier>,
         locale_resources: Vec<LocaleResource>,
         locales: HashMap<LanguageIdentifier, usize>,
     ) -> Self {
-        let bundle = create_bundle(
-            &selected_language,
-            &fallback_language,
-            &locale_resources,
-            &locales,
+        let result = Self::try_new(
+            selected_language,
+            fallback_language,
+            locale_resources,
+            locales,
         );
-        Self {
-            selected_language: Signal::new(selected_language),
-            fallback_language: Signal::new(fallback_language),
-            locale_resources: Signal::new(locale_resources),
-            locales: Signal::new(locales),
-            active_bundle: Signal::new(bundle),
-        }
+        result.expect("I18n cannot be created")
     }
 
-    pub fn translate_with_args(&self, msg: &str, args: Option<&FluentArgs>) -> String {
+    pub fn try_translate_with_args(
+        &self,
+        msg: &str,
+        args: Option<&FluentArgs>,
+    ) -> Result<String, Error> {
         let bundle = self.active_bundle.read();
+
         let message = bundle
             .get_message(msg)
-            .unwrap_or_else(|| panic!("Failed to get message: {}.", msg));
-        let pattern = message.value().expect("Failed to get the message pattern.");
-        let mut errors = vec![];
+            .ok_or(Error::MessageIdNotFound(msg.into()))?;
 
-        bundle
+        let pattern = message
+            .value()
+            .ok_or(Error::MessagePatternNotFound(msg.into()))?;
+
+        let mut errors = vec![];
+        let translation = bundle
             .format_pattern(pattern, args, &mut errors)
-            .to_string()
+            .to_string();
+
+        (errors.is_empty())
+            .then_some(translation)
+            .ok_or(Error::FluentErrorsDetected(format!("{:#?}", errors)))
     }
 
+    #[cfg(feature = "legacy_panic_methods")]
+    #[deprecated(since = "0.5.0", note = "use `try_translate_with_args()` instead")]
+    pub fn translate_with_args(&self, msg: &str, args: Option<&FluentArgs>) -> String {
+        let result = self.try_translate_with_args(msg, args);
+        result.expect("failed to translate message id {msg}")
+    }
+
+    #[inline]
+    pub fn try_translate(&self, msg: &str) -> Result<String, Error> {
+        self.try_translate_with_args(msg, None)
+    }
+
+    #[cfg(feature = "legacy_panic_methods")]
+    #[deprecated(since = "0.5.0", note = "use `try_translate()` instead")]
     pub fn translate(&self, msg: &str) -> String {
-        self.translate_with_args(msg, None)
+        let result = self.try_translate(msg);
+        result.expect("failed to translate message id {msg}")
     }
 
     /// Get the selected language.
+    #[inline]
     pub fn language(&self) -> LanguageIdentifier {
         self.selected_language.read().clone()
     }
@@ -217,48 +288,73 @@ impl I18n {
     }
 
     /// Update the selected language.
-    pub fn set_language(&mut self, id: LanguageIdentifier) {
+    pub fn try_set_language(&mut self, id: LanguageIdentifier) -> Result<(), Error> {
         *self.selected_language.write() = id;
-        self.update_active_bundle();
+        self.try_update_active_bundle()
+    }
+
+    /// Update the selected language.
+    #[cfg(feature = "legacy_panic_methods")]
+    #[deprecated(since = "0.5.0", note = "use `try_set_language()` instead")]
+    pub fn set_language(&mut self, id: LanguageIdentifier) {
+        let result = self.try_set_language(id);
+        result.expect("language cannot be set")
     }
 
     /// Update the fallback language.
-    pub fn set_fallback_language(&mut self, id: LanguageIdentifier) {
+    pub fn try_set_fallback_language(&mut self, id: LanguageIdentifier) -> Result<(), Error> {
+        self.locales
+            .read()
+            .get(&id)
+            .ok_or(Error::FallbackMustHaveLocale(id.to_string()))?;
+
         *self.fallback_language.write() = Some(id);
-        self.update_active_bundle();
+        self.try_update_active_bundle()
     }
 
-    fn update_active_bundle(&mut self) {
-        let bundle = create_bundle(
+    /// Update the fallback language.
+    #[cfg(feature = "legacy_panic_methods")]
+    #[deprecated(since = "0.5.0", note = "use `try_set_fallback_language()` instead")]
+    pub fn set_fallback_language(&mut self, id: LanguageIdentifier) {
+        let result = self.try_set_fallback_language(id);
+        result.expect("fallback language cannot be set");
+    }
+
+    fn try_update_active_bundle(&mut self) -> Result<(), Error> {
+        let bundle = try_create_bundle(
             &self.selected_language.read(),
             &self.fallback_language.read(),
             &self.locale_resources.read(),
             &self.locales.read(),
-        );
+        )?;
         self.active_bundle.set(bundle);
+        Ok(())
     }
 }
 
-fn create_bundle(
+fn try_create_bundle(
     selected_language: &LanguageIdentifier,
     fallback_language: &Option<LanguageIdentifier>,
-    locale_resources: &Vec<LocaleResource>,
+    locale_resources: &[LocaleResource],
     locales: &HashMap<LanguageIdentifier, usize>,
-) -> FluentBundle<FluentResource> {
+) -> Result<FluentBundle<FluentResource>, Error> {
     let add_resource = move |bundle: &mut FluentBundle<FluentResource>,
                              langid: &LanguageIdentifier,
                              locale_resources: &[LocaleResource]| {
-        if let Some(&i) = locales.get(&langid) {
+        if let Some(&i) = locales.get(langid) {
             let resource = &locale_resources[i];
-            let resource = FluentResource::try_new(resource.to_resource_string())
-                .expect("Failed to ceate Resource.");
+            let resource =
+                FluentResource::try_new(resource.try_to_resource_string()?).map_err(|e| {
+                    Error::FluentErrorsDetected(format!("resource langid: {}\n{:#?}", langid, e))
+                })?;
             bundle.add_resource_overriding(resource);
-        }
+        };
+        Ok(())
     };
 
     let mut bundle = FluentBundle::new(vec![selected_language.clone()]);
     if let Some(fallback_language) = fallback_language {
-        add_resource(&mut bundle, &fallback_language, locale_resources);
+        add_resource(&mut bundle, fallback_language, locale_resources)?;
     }
 
     let (language, script, region, variants) = selected_language.clone().into_parts();
@@ -267,12 +363,12 @@ fn create_bundle(
     let script_lang = LanguageIdentifier::from_parts(language, script, None, &[]);
     let language_lang = LanguageIdentifier::from_parts(language, None, None, &[]);
 
-    add_resource(&mut bundle, &language_lang, locale_resources);
-    add_resource(&mut bundle, &script_lang, locale_resources);
-    add_resource(&mut bundle, &region_lang, locale_resources);
-    add_resource(&mut bundle, &variants_lang, locale_resources);
+    add_resource(&mut bundle, &language_lang, locale_resources)?;
+    add_resource(&mut bundle, &script_lang, locale_resources)?;
+    add_resource(&mut bundle, &region_lang, locale_resources)?;
+    add_resource(&mut bundle, &variants_lang, locale_resources)?;
 
-    bundle
+    Ok(bundle)
 }
 
 pub fn i18n() -> I18n {
