@@ -87,7 +87,7 @@ macro_rules! t {
 /// #   let config = I18nConfig::new(lang.clone()).with_locale((lang.clone(), "hello = Hello, {$name}")).with_fallback(lang.clone());
 /// #   let mut i18n = use_init_i18n(|| config);
 /// let message = tid!("no-key");
-/// assert_eq!(message, "no-key");
+/// assert_eq!(message, "message-id: no-key should be translated");
 /// #   rsx! { "" }
 /// # }
 /// ```
