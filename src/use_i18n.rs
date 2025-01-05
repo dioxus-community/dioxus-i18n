@@ -77,7 +77,10 @@ impl LocaleResource {
     #[deprecated(since = "0.5.0", note = "use `try_to_resource_string()` instead")]
     pub fn to_resource_string(&self) -> String {
         let result = self.try_to_resource_string();
-        result.expect("failed to create LocaleResource")
+        match result {
+            Ok(string) => string,
+            Err(err) => panic!("failed to create resource string {:?}: {}", self, err),
+        }
     }
 }
 
@@ -177,6 +180,7 @@ impl I18nConfig {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn with_auto_pathbuf(self, file: PathBuf) -> Result<Self, Error> {
         assert!(is_ftl_file(&file));
 
@@ -187,7 +191,7 @@ impl I18nConfig {
 
         let id_str = stem.to_str().ok_or(Error::InvalidLanguageId(format!(
             "Cannot convert: {}",
-            stem.to_string_lossy().to_string()
+            stem.to_string_lossy()
         )))?;
 
         let id = LanguageIdentifier::from_bytes(id_str.as_bytes())
@@ -201,10 +205,17 @@ impl I18nConfig {
     /// Will panic! on error.
     ///
     /// The method is not available for `wasm32` builds.
+    #[cfg(feature = "legacy_panic_methods")]
     #[cfg(not(target_arch = "wasm32"))]
     pub fn with_auto_locales(self, path: PathBuf) {
         let result = self.try_with_auto_locales(path);
-        result.expect("with_auto_locales must have valid pathbuf");
+        match result {
+            Ok(me) => me,
+            Err(err) => panic!(
+                "with_auto_locales must have valid pathbuf {}: {}",
+                path, err
+            ),
+        }
     }
 }
 
@@ -303,7 +314,10 @@ impl I18n {
             locale_resources,
             locales,
         );
-        result.expect("I18n cannot be created")
+        match result {
+            Ok(i18n) => i18n,
+            Err(err) => panic!("I18n cannot be created: {}", err),
+        }
     }
 
     pub fn try_translate_with_args(
@@ -335,7 +349,10 @@ impl I18n {
     #[deprecated(since = "0.5.0", note = "use `try_translate_with_args()` instead")]
     pub fn translate_with_args(&self, msg: &str, args: Option<&FluentArgs>) -> String {
         let result = self.try_translate_with_args(msg, args);
-        result.expect("failed to translate message id {msg}")
+        match result {
+            Ok(translation) => translation,
+            Err(err) => panic!("Failed to translate {}: {}", msg, err),
+        }
     }
 
     #[inline]
@@ -347,7 +364,10 @@ impl I18n {
     #[deprecated(since = "0.5.0", note = "use `try_translate()` instead")]
     pub fn translate(&self, msg: &str) -> String {
         let result = self.try_translate(msg);
-        result.expect("failed to translate message id {msg}")
+        match result {
+            Ok(translation) => translation,
+            Err(err) => panic!("Failed to translate {}: {}", msg, err),
+        }
     }
 
     /// Get the selected language.
@@ -371,8 +391,13 @@ impl I18n {
     #[cfg(feature = "legacy_panic_methods")]
     #[deprecated(since = "0.5.0", note = "use `try_set_language()` instead")]
     pub fn set_language(&mut self, id: LanguageIdentifier) {
+        use dioxus_elements::code::language;
+
         let result = self.try_set_language(id);
-        result.expect("language cannot be set")
+        match result {
+            Ok(()) => (),
+            Err(err) => panic!("cannot set language {}: {}", id, err),
+        }
     }
 
     /// Update the fallback language.
@@ -391,7 +416,10 @@ impl I18n {
     #[deprecated(since = "0.5.0", note = "use `try_set_fallback_language()` instead")]
     pub fn set_fallback_language(&mut self, id: LanguageIdentifier) {
         let result = self.try_set_fallback_language(id);
-        result.expect("fallback language cannot be set");
+        match result {
+            Ok(()) => (),
+            Err(err) => panic!("cannot set fallback language {}: {}", id, err),
+        }
     }
 
     fn try_update_active_bundle(&mut self) -> Result<(), Error> {
