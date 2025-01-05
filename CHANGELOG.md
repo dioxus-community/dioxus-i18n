@@ -22,6 +22,9 @@
 
 - Added `try_use_init_i18n`. This does _not_ replace `use_init_i18n`, which remains in the default build.
 
+- Added `I18nConfig::try_with_auto_locales` and `I18nConfig::with_auto_locales` methods to determine
+  supported locales from deep search for translation files.
+
 ### Change
 
 - t! macro amended to use `try_translate` and `try_translate_with_args`, but will perform `.expect("..")`

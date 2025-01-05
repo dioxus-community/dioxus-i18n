@@ -16,4 +16,10 @@ pub enum Error {
 
     #[error("fallback for \"{0}\" must have locale")]
     FallbackMustHaveLocale(String),
+
+    #[error("language id cannot be determined - reason: {0}")]
+    InvalidLanguageId(String),
+
+    #[error("invalid path: {0}")]
+    InvalidPath(String),
 }

@@ -1777,6 +1777,7 @@ dependencies = [
  "pretty_assertions",
  "thiserror 2.0.9",
  "unic-langid",
+ "walkdir",
 ]
 
 [[package]]

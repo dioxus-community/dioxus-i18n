@@ -4,6 +4,9 @@ use dioxus_lib::prelude::*;
 use fluent::{FluentArgs, FluentBundle, FluentResource};
 use unic_langid::LanguageIdentifier;
 
+#[cfg(not(target_arch = "wasm32"))]
+use walkdir::WalkDir;
+
 use std::collections::HashMap;
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -149,6 +152,77 @@ impl I18nConfig {
         self.locales.insert(locale.id, index);
         self
     }
+
+    /// Add multiple locales from given folder, based on their filename.
+    ///
+    /// If the path represents a folder, then the folder will be deep traversed for
+    /// all '*.ftl' files. If the filename represents a [LanguageIdentifier] then it
+    ///  will be added to the config.
+    ///
+    /// If the path represents a file, then the filename must represent a
+    /// unic_langid::LanguageIdentifier for it to be added to the config.
+    ///
+    /// The method is not available for `wasm32` builds.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn try_with_auto_locales(self, path: PathBuf) -> Result<Self, Error> {
+        if path.is_dir() {
+            let files = find_ftl_files(&path)?;
+            files
+                .into_iter()
+                .try_fold(self, |acc, file| acc.with_auto_pathbuf(file))
+        } else if is_ftl_file(&path) {
+            self.with_auto_pathbuf(path)
+        } else {
+            Err(Error::InvalidPath(path.to_string_lossy().to_string()))
+        }
+    }
+
+    fn with_auto_pathbuf(self, file: PathBuf) -> Result<Self, Error> {
+        assert!(is_ftl_file(&file));
+
+        let stem = file.file_stem().ok_or(Error::InvalidLanguageId(format!(
+            "No file stem: '{}'",
+            file.display()
+        )))?;
+
+        let id_str = stem.to_str().ok_or(Error::InvalidLanguageId(format!(
+            "Cannot convert: {}",
+            stem.to_string_lossy().to_string()
+        )))?;
+
+        let id = LanguageIdentifier::from_bytes(id_str.as_bytes())
+            .map_err(|e| Error::InvalidLanguageId(e.to_string()))?;
+
+        Ok(self.with_locale((id, file)))
+    }
+
+    /// Add multiple locales from given folder, based on their filename.
+    ///
+    /// Will panic! on error.
+    ///
+    /// The method is not available for `wasm32` builds.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn with_auto_locales(self, path: PathBuf) {
+        let result = self.try_with_auto_locales(path);
+        result.expect("with_auto_locales must have valid pathbuf");
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn find_ftl_files(folder: &PathBuf) -> Result<Vec<PathBuf>, Error> {
+    let ftl_files: Vec<PathBuf> = WalkDir::new(folder)
+        .into_iter()
+        .filter_map(|entry| entry.ok())
+        .filter(|entry| is_ftl_file(&entry.path().to_path_buf()))
+        .map(|entry| entry.path().to_path_buf())
+        .collect();
+
+    Ok(ftl_files)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn is_ftl_file(entry: &PathBuf) -> bool {
+    entry.is_file() && entry.extension().map(|ext| ext == "ftl").unwrap_or(false)
 }
 
 /// Initialize an i18n provider.
@@ -512,5 +586,87 @@ mod test {
                 locales: HashMap::from([(LANG_B, 0), (LANG_C, 0)]),
             }
         );
+    }
+
+    #[test]
+    fn can_auto_add_locales_folder_to_config() {
+        const LANG_A: LanguageIdentifier = langid!("la-LA");
+
+        let root_path_str = &format!("{}/tests/data/fallback/", env!("CARGO_MANIFEST_DIR"));
+        let pathbuf = PathBuf::from(root_path_str);
+
+        let config = I18nConfig::new(LANG_A)
+            .try_with_auto_locales(pathbuf)
+            .ok()
+            .unwrap();
+
+        let expected_locales = [
+            "fb-FB",
+            "la",
+            "la-Scpt",
+            "la-Scpt-LA",
+            "la-Scpt-LA-variants",
+        ];
+
+        assert_eq!(config.locales.len(), expected_locales.len());
+        assert_eq!(config.locale_resources.len(), expected_locales.len());
+
+        expected_locales.into_iter().for_each(|l| {
+            let expected_filename = format!("{root_path_str}/{l}.ftl");
+            let id = LanguageIdentifier::from_bytes(l.as_bytes()).unwrap();
+            assert!(config.locales.get(&id).is_some());
+            assert!(config
+                .locale_resources
+                .contains(&LocaleResource::Path(PathBuf::from(expected_filename))));
+        });
+    }
+
+    #[test]
+    fn can_auto_add_locales_file_to_config() {
+        const LANG_A: LanguageIdentifier = langid!("la-LA");
+
+        let path_str = &format!(
+            "{}/tests/data/fallback/fb-FB.ftl",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let pathbuf = PathBuf::from(path_str);
+
+        let config = I18nConfig::new(LANG_A)
+            .try_with_auto_locales(pathbuf.clone())
+            .ok()
+            .unwrap();
+
+        assert_eq!(config.locales.len(), 1);
+        assert!(config.locales.get(&langid!("fb-FB")).is_some());
+
+        assert_eq!(config.locale_resources.len(), 1);
+        assert!(config
+            .locale_resources
+            .contains(&LocaleResource::Path(pathbuf)));
+    }
+
+    #[test]
+    fn will_fail_auto_locales_with_invalid_folder() {
+        const LANG_A: LanguageIdentifier = langid!("la-LA");
+
+        let root_path_str = &format!("{}/non_existing_path/", env!("CARGO_MANIFEST_DIR"));
+        let pathbuf = PathBuf::from(root_path_str);
+
+        let config = I18nConfig::new(LANG_A).try_with_auto_locales(pathbuf);
+        assert_eq!(config.is_err(), true);
+    }
+
+    #[test]
+    fn will_fail_auto_locales_with_invalid_file() {
+        const LANG_A: LanguageIdentifier = langid!("la-LA");
+
+        let path_str = &format!(
+            "{}/tests/data/fallback/invalid_language_id.ftl",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let pathbuf = PathBuf::from(path_str);
+
+        let config = I18nConfig::new(LANG_A).try_with_auto_locales(pathbuf);
+        assert_eq!(config.is_err(), true);
     }
 }
