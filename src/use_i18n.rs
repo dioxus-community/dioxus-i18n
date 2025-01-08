@@ -49,7 +49,7 @@ where
     }
 }
 
-/// A `LocaleResource` can be static text, or dervied from a file. The file derivation is not supported for `wasm`.
+/// A `LocaleResource` can be static text, or a filesystem file (not supported in WASM).
 #[derive(Debug, PartialEq)]
 // #[cfg_attr(test, derive(Debug)]
 pub enum LocaleResource {
