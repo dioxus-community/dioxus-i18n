@@ -86,7 +86,7 @@ impl From<PathBuf> for LocaleResource {
 /// The configuration for `I18n`.
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct I18nConfig {
-    /// The initial value for [`I18n`][`set_language`]
+    /// The initial language, can be later changed with [`I18n::set_language`]
     id: LanguageIdentifier,
 
     /// The final fallback language if no other locales are found for `id`.
