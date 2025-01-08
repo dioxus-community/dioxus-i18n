@@ -27,7 +27,6 @@ hello = Hello, {$name}!
 fn app() -> Element {
     let i18 = use_init_i18n(|| {
         I18nConfig::new(langid!("en-US"))
-            // v0.4.0+
             .with_locale(( // Embed
                 langid!("en-US"),
                 include_str!("./en-US.ftl")
@@ -40,7 +39,7 @@ fn app() -> Element {
                 langid!("en"), // which is useful to assign a specific region for
                 include_str!("./en-US.ftl") // the primary language
             ))
-            // v0.3.0 - old format; deprecated...
+            // alternatively...
             .with_locale(Locale::new_static( // Embed
                 langid!("en-US"),
                 include_str!("./en-US.ftl"),

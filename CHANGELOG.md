@@ -12,7 +12,6 @@
   constructors no longer have to be _explicitly_ given.
   They can be determined implicitly from `(LanguageIdentifier, &str)`  or
   `(LanguageIdentifer, PathBuf)`.
-  The explicit constructors have been flagged as deprecated.
 
 - Enabled shared 'LocaleResource's, where two dialect can use the same translation file.
   For example ["en", "en-GB"] share "en-GB.ftl".

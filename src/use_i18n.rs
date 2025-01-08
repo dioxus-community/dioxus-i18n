@@ -15,10 +15,6 @@ pub struct Locale {
 }
 
 impl Locale {
-    #[deprecated(
-        since = "0.3.0",
-        note = "remove `Locale::new_static` and use `(lang_id, a_str)` directly"
-    )]
     pub fn new_static(id: LanguageIdentifier, str: &'static str) -> Self {
         Self {
             id,
@@ -26,10 +22,6 @@ impl Locale {
         }
     }
 
-    #[deprecated(
-        since = "0.3.0",
-        note = "remove `Locale::new_dynamic` and use `(lang_id, a_pathbuf)` directly"
-    )]
     #[cfg(not(target_arch = "wasm32"))]
     pub fn new_dynamic(id: LanguageIdentifier, path: impl Into<PathBuf>) -> Self {
         Self {
@@ -285,7 +277,6 @@ mod test {
     use pretty_assertions::assert_eq;
     use unic_langid::langid;
 
-    #[allow(deprecated)]
     #[test]
     fn can_add_locale_to_config_deprecating() {
         const LANG_A: LanguageIdentifier = langid!("la-LA");
