@@ -20,10 +20,6 @@ pub struct Locale {
 }
 
 impl Locale {
-    #[deprecated(
-        since = "0.4.0",
-        note = "remove `Locale::new_static` and use `(lang_id, a_str)` directly"
-    )]
     pub fn new_static(id: LanguageIdentifier, str: &'static str) -> Self {
         Self {
             id,
@@ -31,10 +27,6 @@ impl Locale {
         }
     }
 
-    #[deprecated(
-        since = "0.4.0",
-        note = "remove `Locale::new_dynamic` and use `(lang_id, a_pathbuf)` directly"
-    )]
     #[cfg(not(target_arch = "wasm32"))]
     pub fn new_dynamic(id: LanguageIdentifier, path: impl Into<PathBuf>) -> Self {
         Self {
@@ -54,9 +46,8 @@ where
     }
 }
 
-/// A `LocaleResource` can be static text, or dervied from a file. The file derivation is not supported for `wasm`.
+/// A `LocaleResource` can be static text, or a filesystem file (not supported in WASM).
 #[derive(Debug, PartialEq)]
-// #[cfg_attr(test, derive(Debug)]
 pub enum LocaleResource {
     Static(&'static str),
     #[cfg(not(target_arch = "wasm32"))]
@@ -100,7 +91,7 @@ impl From<PathBuf> for LocaleResource {
 /// The configuration for `I18n`.
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct I18nConfig {
-    /// The initial value for [`I18n`][`set_language`]
+    /// The initial language, can be later changed with [`I18n::set_language`]
     id: LanguageIdentifier,
 
     /// The final fallback language if no other locales are found for `id`.
@@ -483,9 +474,8 @@ mod test {
     use pretty_assertions::assert_eq;
     use unic_langid::langid;
 
-    #[allow(deprecated)]
     #[test]
-    fn can_add_locale_to_config_deprecating() {
+    fn can_add_locale_to_config_explicit_locale() {
         const LANG_A: LanguageIdentifier = langid!("la-LA");
         const LANG_B: LanguageIdentifier = langid!("la-LB");
         const LANG_C: LanguageIdentifier = langid!("la-LC");
@@ -509,7 +499,7 @@ mod test {
     }
 
     #[test]
-    fn can_add_locale_to_config_v0_4_0() {
+    fn can_add_locale_to_config_implicit_locale() {
         const LANG_A: LanguageIdentifier = langid!("la-LA");
         const LANG_B: LanguageIdentifier = langid!("la-LB");
         const LANG_C: LanguageIdentifier = langid!("la-LC");
