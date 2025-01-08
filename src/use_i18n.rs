@@ -43,7 +43,6 @@ where
 
 /// A `LocaleResource` can be static text, or dervied from a file. The file derivation is not supported for `wasm`.
 #[derive(Debug, PartialEq)]
-// #[cfg_attr(test, derive(Debug)]
 pub enum LocaleResource {
     Static(&'static str),
     #[cfg(not(target_arch = "wasm32"))]
