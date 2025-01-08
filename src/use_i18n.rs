@@ -277,7 +277,7 @@ mod test {
     use unic_langid::langid;
 
     #[test]
-    fn can_add_locale_to_config_deprecating() {
+    fn can_add_locale_to_config_explicit_locale() {
         const LANG_A: LanguageIdentifier = langid!("la-LA");
         const LANG_B: LanguageIdentifier = langid!("la-LB");
         const LANG_C: LanguageIdentifier = langid!("la-LC");
@@ -301,7 +301,7 @@ mod test {
     }
 
     #[test]
-    fn can_add_locale_to_config_v0_4_0() {
+    fn can_add_locale_to_config_implicit_locale() {
         const LANG_A: LanguageIdentifier = langid!("la-LA");
         const LANG_B: LanguageIdentifier = langid!("la-LB");
         const LANG_C: LanguageIdentifier = langid!("la-LC");
