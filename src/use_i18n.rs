@@ -10,7 +10,7 @@ use walkdir::WalkDir;
 use std::collections::HashMap;
 
 #[cfg(not(target_arch = "wasm32"))]
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// `Locale` is a "place-holder" around what will eventually be a `fluent::FluentBundle`
 #[cfg_attr(test, derive(Debug, PartialEq))]
@@ -215,7 +215,7 @@ fn find_ftl_files(folder: &PathBuf) -> Result<Vec<PathBuf>, Error> {
     let ftl_files: Vec<PathBuf> = WalkDir::new(folder)
         .into_iter()
         .filter_map(|entry| entry.ok())
-        .filter(|entry| is_ftl_file(&entry.path().to_path_buf()))
+        .filter(|entry| is_ftl_file(entry.path()))
         .map(|entry| entry.path().to_path_buf())
         .collect();
 
@@ -223,7 +223,7 @@ fn find_ftl_files(folder: &PathBuf) -> Result<Vec<PathBuf>, Error> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn is_ftl_file(entry: &PathBuf) -> bool {
+fn is_ftl_file(entry: &Path) -> bool {
     entry.is_file() && entry.extension().map(|ext| ext == "ftl").unwrap_or(false)
 }
 
@@ -415,11 +415,12 @@ impl I18n {
 
     fn try_update_active_bundle(&mut self) -> Result<(), Error> {
         let bundle = try_create_bundle(
-            &self.selected_language.read(),
-            &self.fallback_language.read(),
-            &self.locale_resources.read(),
-            &self.locales.read(),
+            &self.selected_language.peek(),
+            &self.fallback_language.peek(),
+            &self.locale_resources.peek(),
+            &self.locales.peek(),
         )?;
+
         self.active_bundle.set(bundle);
         Ok(())
     }
