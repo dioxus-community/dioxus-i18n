@@ -221,10 +221,10 @@ impl I18n {
 
     fn update_active_bundle(&mut self) {
         let bundle = create_bundle(
-            &self.selected_language.read(),
-            &self.fallback_language.read(),
-            &self.locale_resources.read(),
-            &self.locales.read(),
+            &self.selected_language.peek(),
+            &self.fallback_language.peek(),
+            &self.locale_resources.peek(),
+            &self.locales.peek(),
         );
         self.active_bundle.set(bundle);
     }
@@ -233,13 +233,13 @@ impl I18n {
 fn create_bundle(
     selected_language: &LanguageIdentifier,
     fallback_language: &Option<LanguageIdentifier>,
-    locale_resources: &Vec<LocaleResource>,
+    locale_resources: &[LocaleResource],
     locales: &HashMap<LanguageIdentifier, usize>,
 ) -> FluentBundle<FluentResource> {
     let add_resource = move |bundle: &mut FluentBundle<FluentResource>,
                              langid: &LanguageIdentifier,
                              locale_resources: &[LocaleResource]| {
-        if let Some(&i) = locales.get(&langid) {
+        if let Some(&i) = locales.get(langid) {
             let resource = &locale_resources[i];
             let resource = FluentResource::try_new(resource.to_resource_string())
                 .expect("Failed to ceate Resource.");
@@ -249,7 +249,7 @@ fn create_bundle(
 
     let mut bundle = FluentBundle::new(vec![selected_language.clone()]);
     if let Some(fallback_language) = fallback_language {
-        add_resource(&mut bundle, &fallback_language, locale_resources);
+        add_resource(&mut bundle, fallback_language, locale_resources);
     }
 
     let (language, script, region, variants) = selected_language.clone().into_parts();
