@@ -35,7 +35,7 @@
 
 - Corrected `deprecated(since)` versions to version at which they were deprecated, not previous release.
 
-## [0.4.0]
+## [0.4.0] 2025-01-25
 
 ### Added
 
