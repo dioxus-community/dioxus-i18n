@@ -1,29 +1,26 @@
 # Changelog
 
-## [0.5.0]
+## [0.4.1]
 
 ### Added
 
-- New crate feature `legacy_panic_methods` (see below).
+- New methods (`I18nConfig::with_auto_locales`) to determine supported locales from deep search for translation files.
 
-- New methods returning Result<_, Error> rather than panic!.
+- New methods returning `Result<_, Error>` rather than `panic!`, such that:
 
-  - `LocaleResource::try_to_resource_string` replacing `LocaleResource::to_resource_string`
-  - `I18n::try_translate` replacing `I18n::translate`
-  - `I18n::try_translate_with_args` replacing `I18n::translate_with_args`
-
-- __Note:__ legacy panic! methods (mainly `translate` and `translate_with_args`) can be enabled
-  with the `legacy_panic_methods` feature, but they are marked `deprecated` and will, nevertheless,
-  produce a warning in client code.
+  | __`panic!` version__                    | __`Result<_, Error>` vesion__            |
+  |--------------------------------  -------|------  ----------------------------------|
+  | `LocaleResource::to_resource_string`    | `LocaleResource::try_to_resource_string` |
+  | `I18n::translate`                       | `I18n::try_translate`                    |
+  | `I18n::translate_with_args`             | `I18n::try_translate_with_args`          |
+  | `I18n::set_fallback_language`           | `I18n::try_set_fallback_language`        |
+  | `I18n::set_language`                    | `I18n::try_set_language`                 |
+  | `use_init_i18n`                         | `try_use_init_i18n`                      |
+  | `I18nConfig::with_auto_locales`         | `I18nConfig::try_with_auto_locales`      |
 
 - New `te!` macro which acts like `t!` but returns `Error`.
 
 - New `tid!` macro which acts like `t!` but returns the message-id.
-
-- Added `try_use_init_i18n`. This does _not_ replace `use_init_i18n`, which remains in the default build.
-
-- Added `I18nConfig::try_with_auto_locales` and `I18nConfig::with_auto_locales` methods to determine
-  supported locales from deep search for translation files.
 
 ### Change
 
@@ -32,8 +29,6 @@
 
 - Use of `set_fallback_language` / `try_set_fallback_language` without a corresponding locale
   translation is treated as an error.
-
-- Corrected `deprecated(since)` versions to version at which they were deprecated, not previous release.
 
 ## [0.4.0] 2025-01-25
 

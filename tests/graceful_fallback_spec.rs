@@ -5,7 +5,6 @@ use dioxus_i18n::prelude::{use_init_i18n, I18n, I18nConfig};
 use unic_langid::{langid, LanguageIdentifier};
 
 #[test]
-#[allow(deprecated)]
 fn exact_locale_match_will_use_translation() {
     test_hook(i18n, |value, proxy| {
         proxy.assert(
@@ -19,7 +18,6 @@ fn exact_locale_match_will_use_translation() {
 }
 
 #[test]
-#[allow(deprecated)]
 fn non_exact_locale_match_will_use_region() {
     test_hook(i18n, |value, proxy| {
         proxy.assert(
@@ -33,7 +31,6 @@ fn non_exact_locale_match_will_use_region() {
 }
 
 #[test]
-#[allow(deprecated)]
 fn non_exact_locale_match_will_use_script() {
     test_hook(i18n, |value, proxy| {
         proxy.assert(
@@ -47,7 +44,6 @@ fn non_exact_locale_match_will_use_script() {
 }
 
 #[test]
-#[allow(deprecated)]
 fn non_exact_locale_match_will_use_language() {
     test_hook(i18n, |value, proxy| {
         proxy.assert(
@@ -61,7 +57,6 @@ fn non_exact_locale_match_will_use_language() {
 }
 
 #[test]
-#[allow(deprecated)]
 fn no_locale_match_will_use_fallback() {
     test_hook(i18n, |value, proxy| {
         proxy.assert(

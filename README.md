@@ -13,9 +13,6 @@ i18n integration for Dioxus apps based on the [Project Fluent](https://github.co
   - [freya](https://github.com/marc2332/freya) (doesn't support Dioxus 0.6 yet)
 - Both WASM and native targets
 
-## Features
-- __`legacy_panic_methods`__: Provide legacy (v0.3.0) interfaces that could panic!.
-
 ## Example:
 
 ```ftl

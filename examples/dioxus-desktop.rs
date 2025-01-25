@@ -12,14 +12,8 @@ fn main() {
 fn Body() -> Element {
     let mut i18n = i18n();
 
-    let change_to_english = move |_| {
-        i18n.try_set_language(langid!("en-US"))
-            .expect("try_set_language must suceed")
-    };
-    let change_to_spanish = move |_| {
-        i18n.try_set_language(langid!("es-ES"))
-            .expect("try_set_language must suceed")
-    };
+    let change_to_english = move |_| i18n.set_language(langid!("en-US"));
+    let change_to_spanish = move |_| i18n.set_language(langid!("es-ES"));
 
     rsx!(
         button {
