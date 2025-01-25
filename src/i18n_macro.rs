@@ -46,7 +46,6 @@ macro_rules! te {
 }
 
 /// Translate message from key, panic! if id not found...
-/// This version of the macro retains backwards compatibilty with v0.3.0.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
