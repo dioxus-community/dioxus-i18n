@@ -201,7 +201,7 @@ impl I18nConfig {
     pub fn with_auto_locales(self, path: PathBuf) {
         let result = self.try_with_auto_locales(path);
         match result {
-            Ok(me) => me,
+            Ok(result) => result,
             Err(err) => panic!(
                 "with_auto_locales must have valid pathbuf {}: {}",
                 path, err
