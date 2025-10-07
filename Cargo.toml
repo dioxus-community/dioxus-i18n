@@ -10,7 +10,7 @@ readme = "./README.md"
 categories = ["accessibility", "gui", "localization", "internationalization"]
 
 [dependencies]
-dioxus-lib = { version = "0.7.0-alpha.3", default-features = false, features = [
+dioxus = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = [
     "hooks",
     "macro",
     "signals",
@@ -23,7 +23,7 @@ unic-langid = { version = "0.9", features = ["macros"] }
 walkdir = "2.5.0"
 
 [dev-dependencies]
-dioxus = { version = "0.7.0-alpha.3", features = ["desktop"] }
+dioxus = { git = "https://github.com/DioxusLabs/dioxus", features = ["desktop"] }
 freya = "0.3"
 futures = "0.3.31"
 pretty_assertions = "1.4.1"
