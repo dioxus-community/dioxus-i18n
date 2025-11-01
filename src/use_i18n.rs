@@ -1,6 +1,6 @@
 use super::error::Error;
 
-use dioxus_lib::prelude::*;
+use dioxus::prelude::*;
 use fluent::{FluentArgs, FluentBundle, FluentResource};
 use unic_langid::LanguageIdentifier;
 
