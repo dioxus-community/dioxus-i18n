@@ -60,7 +60,6 @@ pub(crate) fn test_hook<V: 'static>(
         vdom.render_immediate(&mut NoOpMutations);
     }
 
-    vdom.in_scope(ScopeId::ROOT, || {})
 }
 
 #[derive(Debug)]
