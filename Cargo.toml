@@ -10,11 +10,7 @@ readme = "./README.md"
 categories = ["accessibility", "gui", "localization", "internationalization"]
 
 [dependencies]
-dioxus-lib = { version = "0.7.0-alpha.3", default-features = false, features = [
-    "hooks",
-    "macro",
-    "signals",
-] }
+dioxus = { version = "0.7.1", default-features = false }
 fluent = "0.17"
 thiserror = "2.0"
 unic-langid = { version = "0.9", features = ["macros"] }
@@ -23,7 +19,7 @@ unic-langid = { version = "0.9", features = ["macros"] }
 walkdir = "2.5.0"
 
 [dev-dependencies]
-dioxus = { version = "0.7.0-alpha.3", features = ["desktop"] }
+dioxus = { version = "0.7.1", features = ["desktop"] }
 freya = "0.3"
 futures = "0.3.31"
 pretty_assertions = "1.4.1"
