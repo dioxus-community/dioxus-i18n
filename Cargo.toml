@@ -1,6 +1,6 @@
 [package]
 name = "dioxus-i18n"
-version = "0.4.4"
+version = "0.5.0"
 edition = "2021"
 authors = ["Marc Espín <mespinsanz@gmail.com>"]
 description = "i18n integration for Dioxus apps based on Fluent Project."
@@ -10,7 +10,7 @@ readme = "./README.md"
 categories = ["accessibility", "gui", "localization", "internationalization"]
 
 [dependencies]
-dioxus = { version = "0.7.0", default-features = false, features = [
+dioxus = { version = "0.7", default-features = false, features = [
     "hooks",
     "macro",
     "signals",
@@ -23,7 +23,7 @@ unic-langid = { version = "0.9", features = ["macros"] }
 walkdir = "2.5.0"
 
 [dev-dependencies]
-dioxus = { version = "0.7.0", features = ["desktop"] }
+dioxus = { version = "0.7", features = ["desktop"] }
 freya = "0.3"
 futures = "0.3.31"
 pretty_assertions = "1.4.1"
