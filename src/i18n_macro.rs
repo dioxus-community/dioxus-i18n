@@ -30,16 +30,16 @@
 macro_rules! te {
     ($id:expr, $( $name:ident : $value:expr ),* ) => {
         {
-            let mut params_map = dioxus_i18n::fluent::FluentArgs::new();
+            let mut params_map = $crate::fluent::FluentArgs::new();
             $(
                 params_map.set(stringify!($name), $value);
             )*
-            dioxus_i18n::prelude::i18n().try_translate_with_args($id, Some(&params_map))
+            $crate::prelude::i18n().try_translate_with_args($id, Some(&params_map))
         }
     };
 
     ($id:expr ) => {{
-            dioxus_i18n::prelude::i18n().try_translate($id)
+            $crate::prelude::i18n().try_translate($id)
     }};
 }
 
@@ -64,11 +64,11 @@ macro_rules! te {
 #[macro_export]
 macro_rules! t {
     ($id:expr, $( $name:ident : $value:expr ),* ) => {
-        dioxus_i18n::te!($id, $( $name : $value ),*).unwrap_or_else(|e| panic!("{}", e.to_string()))
+        $crate::te!($id, $( $name : $value ),*).unwrap_or_else(|e| panic!("{}", e.to_string()))
     };
 
     ($id:expr ) => {{
-        dioxus_i18n::te!($id).unwrap_or_else(|e| panic!("{}", e.to_string()))
+        $crate::te!($id).unwrap_or_else(|e| panic!("{}", e.to_string()))
     }};
 }
 
@@ -92,10 +92,10 @@ macro_rules! t {
 #[macro_export]
 macro_rules! tid {
     ($id:expr, $( $name:ident : $value:expr ),* ) => {
-        dioxus_i18n::te!($id, $( $name : $value ),*).unwrap_or_else(|e| e.to_string())
+        $crate::te!($id, $( $name : $value ),*).unwrap_or_else(|e| e.to_string())
     };
 
     ($id:expr ) => {{
-        dioxus_i18n::te!($id).unwrap_or_else(|e| e.to_string())
+        $crate::te!($id).unwrap_or_else(|e| e.to_string())
     }};
 }
