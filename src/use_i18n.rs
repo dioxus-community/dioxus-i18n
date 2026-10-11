@@ -645,7 +645,7 @@ mod test {
         expected_locales.into_iter().for_each(|l| {
             let expected_filename = format!("{root_path_str}/{l}.ftl");
             let id = LanguageIdentifier::from_bytes(l.as_bytes()).unwrap();
-            assert!(config.locales.get(&id).is_some());
+            assert!(config.locales.contains_key(&id));
             assert!(config
                 .locale_resources
                 .contains(&LocaleResource::Path(PathBuf::from(expected_filename))));
@@ -668,7 +668,7 @@ mod test {
             .unwrap();
 
         assert_eq!(config.locales.len(), 1);
-        assert!(config.locales.get(&langid!("fb-FB")).is_some());
+        assert!(config.locales.contains_key(&langid!("fb-FB")));
 
         assert_eq!(config.locale_resources.len(), 1);
         assert!(config

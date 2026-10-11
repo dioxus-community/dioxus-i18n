@@ -12,7 +12,8 @@ fn issue_15_recent_change_to_t_macro_unnecessarily_breaks_v0_3_code_test_attr() 
     test_hook(i18n_from_static, |_, proxy| {
         let panic = std::panic::catch_unwind(|| {
             let name = "World";
-            t!(&format!("hello"), name: name)
+            let message_id = "hello".to_owned();
+            t!(&message_id, name: name)
         });
         proxy.assert(panic.is_ok(), true, "translate_from_static_source");
         proxy.assert(
@@ -26,7 +27,10 @@ fn issue_15_recent_change_to_t_macro_unnecessarily_breaks_v0_3_code_test_attr() 
 #[test]
 fn issue_15_recent_change_to_t_macro_unnecessarily_breaks_v0_3_code_test_no_attr() {
     test_hook(i18n_from_static, |_, proxy| {
-        let panic = std::panic::catch_unwind(|| t!(&format!("simple")));
+        let panic = std::panic::catch_unwind(|| {
+            let message_id = "simple".to_owned();
+            t!(&message_id)
+        });
         proxy.assert(panic.is_ok(), true, "translate_from_static_source");
         proxy.assert(
             panic.ok().unwrap(),

@@ -2,7 +2,7 @@ mod common;
 use common::*;
 
 use dioxus_i18n::{
-    prelude::{use_init_i18n, I18n, I18nConfig},
+    prelude::{try_use_init_i18n, use_init_i18n, DioxusI18nError, I18n, I18nConfig},
     t, te, tid,
 };
 use unic_langid::{langid, LanguageIdentifier};
@@ -206,6 +206,53 @@ fn fail_translate_with_invalid_attribute_key() {
 }
 
 #[test]
+fn attribute_only_message_reports_missing_value_pattern() {
+    test_hook(i18n_from_static, |value, proxy| {
+        let error = value
+            .try_translate("attribute_only")
+            .expect_err("attribute-only message must not have a value pattern");
+
+        proxy.assert(
+            matches!(
+                error,
+                DioxusI18nError::MessagePatternNotFound(id) if id == "attribute_only"
+            ),
+            true,
+            "attribute_only_message_reports_missing_value_pattern",
+        );
+    });
+}
+
+#[test]
+fn missing_fluent_argument_reports_resolver_errors() {
+    test_hook(i18n_from_static, |value, proxy| {
+        let error = value
+            .try_translate("hello")
+            .expect_err("missing Fluent argument must report a resolver error");
+
+        proxy.assert(
+            matches!(error, DioxusI18nError::FluentErrorsDetected(_)),
+            true,
+            "missing_fluent_argument_reports_resolver_errors",
+        );
+    });
+}
+
+#[test]
+fn malformed_fluent_resource_reports_parser_errors() {
+    test_hook(
+        || try_use_init_i18n(|| I18nConfig::new(EN).with_locale((EN, "malformed = {"))),
+        |result, proxy| {
+            proxy.assert(
+                matches!(result, Err(DioxusI18nError::FluentErrorsDetected(_))),
+                true,
+                "malformed_fluent_resource_reports_parser_errors",
+            );
+        },
+    );
+}
+
+#[test]
 fn translate_from_dynamic_source() {
     test_hook(i18n_from_dynamic, |_, proxy| {
         let panic = std::panic::catch_unwind(|| {
@@ -222,10 +269,20 @@ fn translate_from_dynamic_source() {
 }
 
 #[test]
-#[should_panic]
-#[ignore] // Panic hidden within test_hook.
-fn fail_translate_from_dynamic_source_when_file_does_not_exist() {
-    test_hook(i18n_from_dynamic_none_existing, |_, _| unreachable!());
+fn unreadable_dynamic_resource_reports_path_error() {
+    test_hook(
+        || try_use_init_i18n(missing_dynamic_config),
+        |result, proxy| {
+            proxy.assert(
+                matches!(
+                    result,
+                    Err(DioxusI18nError::LocaleResourcePathReadFailed(_))
+                ),
+                true,
+                "unreadable_dynamic_resource_reports_path_error",
+            );
+        },
+    );
 }
 
 #[test]
@@ -331,13 +388,12 @@ fn i18n_from_dynamic() -> I18n {
     use_init_i18n(|| config)
 }
 
-fn i18n_from_dynamic_none_existing() -> I18n {
-    let config = I18nConfig::new(EN).with_locale((
+fn missing_dynamic_config() -> I18nConfig {
+    I18nConfig::new(EN).with_locale((
         EN,
         PathBuf::from(format!(
             "{}/tests/data/i18n/non_existing.ftl",
             env!("CARGO_MANIFEST_DIR")
         )),
-    ));
-    use_init_i18n(|| config)
+    ))
 }

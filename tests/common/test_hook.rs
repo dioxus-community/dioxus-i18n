@@ -59,7 +59,6 @@ pub(crate) fn test_hook<V: 'static>(
     while vdom.wait_for_work().now_or_never().is_some() {
         vdom.render_immediate(&mut NoOpMutations);
     }
-
 }
 
 #[derive(Debug)]
