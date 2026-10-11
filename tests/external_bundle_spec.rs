@@ -3,10 +3,7 @@ use common::test_hook::test_hook_after_first_render;
 use common::*;
 
 use dioxus_i18n::{
-    prelude::{
-        i18n, try_use_init_i18n_from_bundle, use_init_i18n_from_bundle, DioxusI18nError,
-        DioxusI18nExternalBundleError, ExternalBundleHandle,
-    },
+    prelude::{i18n, use_init_i18n_from_bundle, DioxusI18nError, ExternalBundleHandle},
     t,
 };
 use fluent::{FluentBundle, FluentResource};
@@ -21,52 +18,34 @@ const EN: LanguageIdentifier = langid!("en");
 const DE: LanguageIdentifier = langid!("de");
 
 #[test]
-fn fallible_bundle_hook_provides_configured_bundle_through_context() {
-    test_hook(
-        || try_use_init_i18n_from_bundle(english_bundle),
-        |result, proxy| {
-            proxy.assert(result.is_ok(), true, "external_bundle_try_hook");
-            let name = "Ada";
-            proxy.assert(
-                t!("hello", name: name),
-                "Hello, Ada!".to_string(),
-                "external_bundle_preserves_fluent_options",
-            );
-        },
-    );
-}
-
-#[test]
-fn externally_configured_bundle_requires_a_locale() {
-    test_hook(
-        || try_use_init_i18n_from_bundle(|| FluentBundle::<FluentResource>::new(Vec::new())),
-        |result, proxy| {
-            proxy.assert(
-                matches!(result, Err(DioxusI18nExternalBundleError::MissingLocale)),
-                true,
-                "external_bundle_requires_locale",
-            );
-        },
-    );
-}
-
-#[test]
-fn external_bundle_handle_rejects_a_replacement_without_a_locale() {
-    test_hook(use_english_bundle, |mut handle, proxy| {
+fn bundle_hook_provides_configured_bundle_through_context() {
+    test_hook(use_english_bundle, |_, proxy| {
+        let name = "Ada";
         proxy.assert(
-            matches!(
-                handle.try_set_bundle(FluentBundle::<FluentResource>::new(Vec::new())),
-                Err(DioxusI18nExternalBundleError::MissingLocale)
-            ),
-            true,
-            "external_bundle_replacement_requires_locale",
-        );
-        proxy.assert(
-            t!("simple"),
-            "Hello, Zaphod!".to_string(),
-            "rejected_external_bundle_replacement_preserves_state",
+            t!("hello", name: name),
+            "Hello, Ada!".to_string(),
+            "external_bundle_preserves_fluent_options",
         );
     });
+}
+
+#[test]
+fn externally_configured_bundle_accepts_an_empty_locale_list() {
+    test_hook(
+        || use_init_i18n_from_bundle(|| bundle_without_locale("simple = Locale-free value")),
+        |_, proxy| {
+            proxy.assert(
+                i18n().language(),
+                LanguageIdentifier::default(),
+                "external_bundle_without_locale_uses_default_language",
+            );
+            proxy.assert(
+                t!("simple"),
+                "Locale-free value".to_string(),
+                "external_bundle_without_locale_translates",
+            );
+        },
+    );
 }
 
 #[test]
@@ -123,7 +102,7 @@ fn replacing_an_external_bundle_rerenders_consumers_atomically() {
             let mut bundle_handle = bundle_handle
                 .get()
                 .expect("the bundle hook publishes its handle");
-            bundle_handle.set_bundle(bundle(DE, "simple = Einfacher Wert"));
+            bundle_handle.set_bundle(bundle_without_locale("simple = Locale-free value"));
         },
     );
 
@@ -131,7 +110,10 @@ fn replacing_an_external_bundle_rerenders_consumers_atomically() {
         *renders.borrow(),
         [
             ("en".to_string(), "Hello, Zaphod!".to_string()),
-            ("de".to_string(), "Einfacher Wert".to_string()),
+            (
+                LanguageIdentifier::default().to_string(),
+                "Locale-free value".to_string()
+            ),
         ]
     );
 }
@@ -145,9 +127,20 @@ fn english_bundle() -> FluentBundle<FluentResource> {
 }
 
 fn bundle(language: LanguageIdentifier, source: &str) -> FluentBundle<FluentResource> {
+    configured_bundle(vec![language], source)
+}
+
+fn bundle_without_locale(source: &str) -> FluentBundle<FluentResource> {
+    configured_bundle(Vec::new(), source)
+}
+
+fn configured_bundle(
+    languages: Vec<LanguageIdentifier>,
+    source: &str,
+) -> FluentBundle<FluentResource> {
     let resource = FluentResource::try_new(source.to_string())
         .unwrap_or_else(|(_, errors)| panic!("test Fluent resource must parse: {errors:?}"));
-    let mut bundle = FluentBundle::new(vec![language]);
+    let mut bundle = FluentBundle::new(languages);
     bundle.set_use_isolating(false);
     bundle
         .add_resource(resource)

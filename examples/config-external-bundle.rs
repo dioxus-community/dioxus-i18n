@@ -5,9 +5,8 @@
 //! through Dioxus context and returns an [`ExternalBundleHandle`], which can replace the complete
 //! bundle with one reactive update.
 //!
-//! Bundles must contain at least one locale. [`try_use_init_i18n_from_bundle`] and
-//! [`ExternalBundleHandle::try_set_bundle`] report an invalid bundle without replacing the active
-//! one.
+//! Parsing resources, composing fallbacks, and configuring the bundle remain the application's
+//! responsibility; the Dioxus adapter stores and reactively replaces the completed bundle.
 
 use dioxus::prelude::*;
 use dioxus_i18n::{

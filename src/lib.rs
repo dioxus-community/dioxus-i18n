@@ -8,6 +8,5 @@ pub use unic_langid;
 
 pub mod prelude {
     pub use crate::error::Error as DioxusI18nError;
-    pub use crate::error::ExternalBundleError as DioxusI18nExternalBundleError;
     pub use crate::use_i18n::*;
 }

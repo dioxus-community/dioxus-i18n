@@ -1,4 +1,4 @@
-use super::error::{Error, ExternalBundleError};
+use super::error::Error;
 
 use dioxus::prelude::*;
 use fluent::{FluentArgs, FluentBundle, FluentResource};
@@ -257,17 +257,9 @@ pub fn use_init_i18n(init: impl FnOnce() -> I18nConfig) -> I18n {
 }
 
 /// Initialize an i18n provider from an externally configured Fluent bundle.
-pub fn try_use_init_i18n_from_bundle(
-    init: impl FnOnce() -> FluentBundle<FluentResource>,
-) -> Result<ExternalBundleHandle, ExternalBundleError> {
-    use_hook(move || {
-        let handle = ExternalBundleHandle::try_new(init())?;
-        provide_context(handle.i18n());
-        Ok(handle)
-    })
-}
-
-/// Initialize an i18n provider from an externally configured Fluent bundle.
+///
+/// Resource parsing, fallback composition, and other bundle configuration are
+/// completed by the caller before this hook receives the bundle.
 pub fn use_init_i18n_from_bundle(
     init: impl FnOnce() -> FluentBundle<FluentResource>,
 ) -> ExternalBundleHandle {
@@ -307,16 +299,10 @@ pub struct ExternalBundleHandle {
 }
 
 impl ExternalBundleHandle {
-    fn try_new(bundle: FluentBundle<FluentResource>) -> Result<Self, ExternalBundleError> {
-        bundle_language(&bundle)?;
-        Ok(Self {
-            active_bundle: Signal::new(bundle),
-        })
-    }
-
     fn new(bundle: FluentBundle<FluentResource>) -> Self {
-        Self::try_new(bundle)
-            .unwrap_or_else(|err| panic!("I18n cannot be created from Fluent bundle: {}", err))
+        Self {
+            active_bundle: Signal::new(bundle),
+        }
     }
 
     fn i18n(self) -> I18n {
@@ -327,20 +313,9 @@ impl ExternalBundleHandle {
         }
     }
 
-    /// Replace the externally configured Fluent bundle.
-    pub fn try_set_bundle(
-        &mut self,
-        bundle: FluentBundle<FluentResource>,
-    ) -> Result<(), ExternalBundleError> {
-        bundle_language(&bundle)?;
-        self.active_bundle.set(bundle);
-        Ok(())
-    }
-
-    /// Replace the externally configured Fluent bundle.
+    /// Replace the externally configured Fluent bundle in one reactive update.
     pub fn set_bundle(&mut self, bundle: FluentBundle<FluentResource>) {
-        self.try_set_bundle(bundle)
-            .unwrap_or_else(|err| panic!("cannot set Fluent bundle: {}", err));
+        self.active_bundle.set(bundle);
     }
 }
 
@@ -452,12 +427,19 @@ impl I18n {
     }
 
     /// Get the selected language.
+    ///
+    /// An externally configured bundle uses its first locale, or the default
+    /// [`LanguageIdentifier`] if its locale list is empty.
     #[inline]
     pub fn language(&self) -> LanguageIdentifier {
         match self.source {
             I18nSource::ManagedBundle(managed) => managed.selected_language.read().clone(),
-            I18nSource::ExternalBundle { active_bundle } => bundle_language(&active_bundle.read())
-                .expect("externally configured bundle locale was validated before storage"),
+            I18nSource::ExternalBundle { active_bundle } => active_bundle
+                .read()
+                .locales
+                .first()
+                .cloned()
+                .unwrap_or_default(),
         }
     }
 
@@ -540,16 +522,6 @@ impl ManagedBundleState {
         self.active_bundle.set(bundle);
         Ok(())
     }
-}
-
-fn bundle_language(
-    bundle: &FluentBundle<FluentResource>,
-) -> Result<LanguageIdentifier, ExternalBundleError> {
-    bundle
-        .locales
-        .first()
-        .cloned()
-        .ok_or(ExternalBundleError::MissingLocale)
 }
 
 fn external_bundle_owns_language() -> Error {
