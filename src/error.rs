@@ -29,3 +29,12 @@ pub enum Error {
     #[error("invalid path: {0}")]
     InvalidPath(String),
 }
+
+#[derive(Clone, Debug, Error)]
+pub enum ExternalBundleError {
+    #[error("externally configured Fluent bundle must contain at least one locale")]
+    MissingLocale,
+
+    #[error("Fluent bundle can only be replaced for an externally configured i18n provider")]
+    NotExternalBundleProvider,
+}
