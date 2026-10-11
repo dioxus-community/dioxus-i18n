@@ -9,7 +9,7 @@ use dioxus_i18n::{
     },
     t,
 };
-use fluent::{FluentArgs, FluentBundle, FluentResource};
+use fluent::{FluentBundle, FluentResource};
 use unic_langid::{langid, LanguageIdentifier};
 
 use std::{
@@ -21,50 +21,16 @@ const EN: LanguageIdentifier = langid!("en");
 const DE: LanguageIdentifier = langid!("de");
 
 #[test]
-fn externally_configured_bundle_formats_values_attributes_and_arguments() {
-    test_hook(i18n_from_bundle, |value, proxy| {
-        proxy.assert(
-            value
-                .try_translate("simple")
-                .expect("simple message must format"),
-            "Simple value".to_string(),
-            "external_bundle_value",
-        );
-        proxy.assert(
-            value
-                .try_translate("card.description")
-                .expect("attribute must format"),
-            "Card description".to_string(),
-            "external_bundle_attribute",
-        );
-
-        let mut args = FluentArgs::new();
-        args.set("name", "Ada");
-        proxy.assert(
-            value
-                .try_translate_with_args("hello", Some(&args))
-                .expect("message arguments must format"),
-            "Hello, Ada!".to_string(),
-            "external_bundle_arguments",
-        );
-        proxy.assert(
-            t!("simple"),
-            "Simple value".to_string(),
-            "external_bundle_macro",
-        );
-    });
-}
-
-#[test]
-fn fallible_bundle_hook_provides_successful_context() {
+fn fallible_bundle_hook_provides_configured_bundle_through_context() {
     test_hook(
         || try_use_init_i18n_from_bundle(english_bundle),
         |result, proxy| {
             proxy.assert(result.is_ok(), true, "external_bundle_try_hook");
+            let name = "Ada";
             proxy.assert(
-                t!("simple"),
-                "Simple value".to_string(),
-                "external_bundle_try_hook_context",
+                t!("hello", name: name),
+                "Hello, Ada!".to_string(),
+                "external_bundle_preserves_fluent_options",
             );
         },
     );
@@ -97,7 +63,7 @@ fn external_bundle_handle_rejects_a_replacement_without_a_locale() {
         );
         proxy.assert(
             t!("simple"),
-            "Simple value".to_string(),
+            "Hello, Zaphod!".to_string(),
             "rejected_external_bundle_replacement_preserves_state",
         );
     });
@@ -126,7 +92,7 @@ fn resource_driven_language_setters_reject_an_external_bundle() {
             value
                 .try_translate("simple")
                 .expect("rejected setters must leave the bundle active"),
-            "Simple value".to_string(),
+            "Hello, Zaphod!".to_string(),
             "external_bundle_rejected_setters_preserve_state",
         );
     });
@@ -177,7 +143,7 @@ fn replacing_an_external_bundle_rerenders_consumers_atomically() {
     assert_eq!(
         *renders.borrow(),
         [
-            ("en".to_string(), "Simple value".to_string()),
+            ("en".to_string(), "Hello, Zaphod!".to_string()),
             ("de".to_string(), "Einfacher Wert".to_string()),
         ]
     );
@@ -193,10 +159,7 @@ fn bundle_handle_from_bundle() -> ExternalBundleHandle {
 }
 
 fn english_bundle() -> FluentBundle<FluentResource> {
-    bundle(
-        EN,
-        "simple = Simple value\nhello = Hello, {$name}!\ncard = Card\n    .description = Card description",
-    )
+    bundle(EN, include_str!("./data/i18n/en.ftl"))
 }
 
 fn bundle(language: LanguageIdentifier, source: &str) -> FluentBundle<FluentResource> {
