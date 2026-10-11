@@ -259,17 +259,23 @@ pub fn use_init_i18n(init: impl FnOnce() -> I18nConfig) -> I18n {
 /// Initialize an i18n provider from an externally configured Fluent bundle.
 pub fn try_use_init_i18n_from_bundle(
     init: impl FnOnce() -> FluentBundle<FluentResource>,
-) -> Result<I18n, ExternalBundleError> {
+) -> Result<ExternalBundleHandle, ExternalBundleError> {
     use_hook(move || {
-        let i18n = I18n::try_from_bundle(init())?;
-        provide_context(i18n);
-        Ok(i18n)
+        let handle = ExternalBundleHandle::try_new(init())?;
+        provide_context(handle.i18n());
+        Ok(handle)
     })
 }
 
 /// Initialize an i18n provider from an externally configured Fluent bundle.
-pub fn use_init_i18n_from_bundle(init: impl FnOnce() -> FluentBundle<FluentResource>) -> I18n {
-    use_context_provider(move || I18n::from_bundle(init()))
+pub fn use_init_i18n_from_bundle(
+    init: impl FnOnce() -> FluentBundle<FluentResource>,
+) -> ExternalBundleHandle {
+    use_hook(move || {
+        let handle = ExternalBundleHandle::new(init());
+        provide_context(handle.i18n());
+        handle
+    })
 }
 
 #[derive(Clone, Copy)]
@@ -292,6 +298,50 @@ struct ManagedBundleState {
     locale_resources: Signal<Vec<LocaleResource>>,
     locales: Signal<HashMap<LanguageIdentifier, usize>>,
     active_bundle: Signal<FluentBundle<FluentResource>>,
+}
+
+/// A capability for replacing an externally configured Fluent bundle.
+#[derive(Clone, Copy)]
+pub struct ExternalBundleHandle {
+    active_bundle: Signal<FluentBundle<FluentResource>>,
+}
+
+impl ExternalBundleHandle {
+    fn try_new(bundle: FluentBundle<FluentResource>) -> Result<Self, ExternalBundleError> {
+        bundle_language(&bundle)?;
+        Ok(Self {
+            active_bundle: Signal::new(bundle),
+        })
+    }
+
+    fn new(bundle: FluentBundle<FluentResource>) -> Self {
+        Self::try_new(bundle)
+            .unwrap_or_else(|err| panic!("I18n cannot be created from Fluent bundle: {}", err))
+    }
+
+    fn i18n(self) -> I18n {
+        I18n {
+            source: I18nSource::ExternalBundle {
+                active_bundle: self.active_bundle,
+            },
+        }
+    }
+
+    /// Replace the externally configured Fluent bundle.
+    pub fn try_set_bundle(
+        &mut self,
+        bundle: FluentBundle<FluentResource>,
+    ) -> Result<(), ExternalBundleError> {
+        bundle_language(&bundle)?;
+        self.active_bundle.set(bundle);
+        Ok(())
+    }
+
+    /// Replace the externally configured Fluent bundle.
+    pub fn set_bundle(&mut self, bundle: FluentBundle<FluentResource>) {
+        self.try_set_bundle(bundle)
+            .unwrap_or_else(|err| panic!("cannot set Fluent bundle: {}", err));
+    }
 }
 
 impl I18n {
@@ -334,24 +384,6 @@ impl I18n {
             Ok(i18n) => i18n,
             Err(err) => panic!("I18n cannot be created: {}", err),
         }
-    }
-
-    /// Create an i18n handle from an externally configured Fluent bundle.
-    pub fn try_from_bundle(
-        bundle: FluentBundle<FluentResource>,
-    ) -> Result<Self, ExternalBundleError> {
-        bundle_language(&bundle)?;
-        Ok(Self {
-            source: I18nSource::ExternalBundle {
-                active_bundle: Signal::new(bundle),
-            },
-        })
-    }
-
-    /// Create an i18n handle from an externally configured Fluent bundle.
-    pub fn from_bundle(bundle: FluentBundle<FluentResource>) -> Self {
-        Self::try_from_bundle(bundle)
-            .unwrap_or_else(|err| panic!("I18n cannot be created from Fluent bundle: {}", err))
     }
 
     pub fn try_translate_with_args(
@@ -471,27 +503,6 @@ impl I18n {
             Ok(()) => (),
             Err(err) => panic!("cannot set fallback language {}: {}", id_name, err),
         }
-    }
-
-    /// Replace the active state with an externally configured Fluent bundle.
-    pub fn try_set_bundle(
-        &mut self,
-        bundle: FluentBundle<FluentResource>,
-    ) -> Result<(), ExternalBundleError> {
-        bundle_language(&bundle)?;
-        match self.source {
-            I18nSource::ManagedBundle(_) => Err(ExternalBundleError::NotExternalBundleProvider),
-            I18nSource::ExternalBundle { mut active_bundle } => {
-                active_bundle.set(bundle);
-                Ok(())
-            }
-        }
-    }
-
-    /// Replace the active state with an externally configured Fluent bundle.
-    pub fn set_bundle(&mut self, bundle: FluentBundle<FluentResource>) {
-        self.try_set_bundle(bundle)
-            .unwrap_or_else(|err| panic!("cannot set Fluent bundle: {}", err));
     }
 
     fn active_bundle(&self) -> Signal<FluentBundle<FluentResource>> {

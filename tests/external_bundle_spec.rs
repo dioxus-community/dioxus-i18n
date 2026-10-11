@@ -4,8 +4,8 @@ use common::*;
 use dioxus::{dioxus_core::NoOpMutations, prelude::*};
 use dioxus_i18n::{
     prelude::{
-        i18n, try_use_init_i18n_from_bundle, use_init_i18n, use_init_i18n_from_bundle,
-        DioxusI18nError, DioxusI18nExternalBundleError, I18n, I18nConfig,
+        i18n, try_use_init_i18n_from_bundle, use_init_i18n_from_bundle, DioxusI18nError,
+        DioxusI18nExternalBundleError, ExternalBundleHandle, I18n,
     },
     t,
 };
@@ -85,6 +85,25 @@ fn externally_configured_bundle_requires_a_locale() {
 }
 
 #[test]
+fn external_bundle_handle_rejects_a_replacement_without_a_locale() {
+    test_hook(bundle_handle_from_bundle, |mut handle, proxy| {
+        proxy.assert(
+            matches!(
+                handle.try_set_bundle(FluentBundle::<FluentResource>::new(Vec::new())),
+                Err(DioxusI18nExternalBundleError::MissingLocale)
+            ),
+            true,
+            "external_bundle_replacement_requires_locale",
+        );
+        proxy.assert(
+            t!("simple"),
+            "Simple value".to_string(),
+            "rejected_external_bundle_replacement_preserves_state",
+        );
+    });
+}
+
+#[test]
 fn resource_driven_language_setters_reject_an_external_bundle() {
     test_hook(i18n_from_bundle, |mut value, proxy| {
         proxy.assert(
@@ -113,33 +132,9 @@ fn resource_driven_language_setters_reject_an_external_bundle() {
     });
 }
 
-#[test]
-fn resource_configured_provider_rejects_external_bundle_replacement() {
-    test_hook(
-        || use_init_i18n(|| I18nConfig::new(EN).with_locale((EN, "simple = Configured value"))),
-        |mut value, proxy| {
-            proxy.assert(
-                matches!(
-                    value.try_set_bundle(english_bundle()),
-                    Err(DioxusI18nExternalBundleError::NotExternalBundleProvider)
-                ),
-                true,
-                "configured_provider_rejects_external_bundle",
-            );
-            proxy.assert(
-                value
-                    .try_translate("simple")
-                    .expect("rejected replacement must preserve configured state"),
-                "Configured value".to_string(),
-                "configured_provider_preserves_state",
-            );
-        },
-    );
-}
-
 #[derive(Clone, Props)]
 struct ReactiveBundleProbeProps {
-    i18n: Rc<Cell<Option<I18n>>>,
+    bundle_handle: Rc<Cell<Option<ExternalBundleHandle>>>,
     renders: Rc<RefCell<Vec<(String, String)>>>,
 }
 
@@ -150,9 +145,9 @@ impl PartialEq for ReactiveBundleProbeProps {
 }
 
 fn reactive_bundle_probe(props: ReactiveBundleProbeProps) -> Element {
-    use_init_i18n_from_bundle(english_bundle);
+    let bundle_handle = use_init_i18n_from_bundle(english_bundle);
     let i18n = i18n();
-    props.i18n.set(Some(i18n));
+    props.bundle_handle.set(Some(bundle_handle));
     props
         .renders
         .borrow_mut()
@@ -162,19 +157,21 @@ fn reactive_bundle_probe(props: ReactiveBundleProbeProps) -> Element {
 
 #[test]
 fn replacing_an_external_bundle_rerenders_consumers_atomically() {
-    let i18n = Rc::new(Cell::new(None));
+    let bundle_handle = Rc::new(Cell::new(None));
     let renders = Rc::new(RefCell::new(Vec::new()));
     let mut dom = VirtualDom::new_with_props(
         reactive_bundle_probe,
         ReactiveBundleProbeProps {
-            i18n: i18n.clone(),
+            bundle_handle: bundle_handle.clone(),
             renders: renders.clone(),
         },
     );
     dom.rebuild_in_place();
 
-    let mut i18n = i18n.get().expect("the bundle probe publishes its handle");
-    i18n.set_bundle(bundle(DE, "simple = Einfacher Wert"));
+    let mut bundle_handle = bundle_handle
+        .get()
+        .expect("the bundle probe publishes its handle");
+    bundle_handle.set_bundle(bundle(DE, "simple = Einfacher Wert"));
     dom.render_immediate(&mut NoOpMutations);
 
     assert_eq!(
@@ -187,6 +184,11 @@ fn replacing_an_external_bundle_rerenders_consumers_atomically() {
 }
 
 fn i18n_from_bundle() -> I18n {
+    bundle_handle_from_bundle();
+    i18n()
+}
+
+fn bundle_handle_from_bundle() -> ExternalBundleHandle {
     use_init_i18n_from_bundle(english_bundle)
 }
 
