@@ -6,10 +6,10 @@ i18n integration for Dioxus apps based on the [Project Fluent](https://github.co
 
 ## Support
 
-- **Dioxus v0.6** 🧬
+- **Dioxus v0.7** 🧬
 - Renderers:
-  - [web](https://dioxuslabs.com/learn/0.6/guides/web/),
-  - [desktop](https://dioxuslabs.com/learn/0.6/guides/desktop/),
+  - [web](https://dioxuslabs.com/learn/0.7/guides/web/),
+  - [desktop](https://dioxuslabs.com/learn/0.7/guides/desktop/),
   - [freya](https://github.com/marc2332/freya)
 - Both WASM and native targets
 
@@ -68,7 +68,8 @@ The examples folder contains a number of working examples:
   * [Auto locales](./examples/config-auto-locales.rs)
   * [Dynamic (PathBuf)](./examples/config-dynamic-pathbuf.rs)
   * [Static (include_str!)](./examples/config-static-includestr.rs)
-* Fluent grammer:
+  * [External Fluent bundle](./examples/config-external-bundle.rs)
+* Fluent grammar:
   * [Application](./examples/fluent-grammar.rs)
   * [FTL file](./examples/data/fluent/en.ftl)
 
