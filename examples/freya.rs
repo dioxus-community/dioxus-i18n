@@ -3,6 +3,8 @@
     windows_subsystem = "windows"
 )]
 
+//! Run with `cargo run --example freya --features freya`.
+
 use dioxus_i18n::prelude::{i18n, use_init_i18n, I18nConfig};
 use dioxus_i18n::t;
 use freya::prelude::*;

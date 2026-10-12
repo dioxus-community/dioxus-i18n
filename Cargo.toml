@@ -9,6 +9,13 @@ repository = "https://github.com/dioxus-community/dioxus-i18n"
 readme = "./README.md"
 categories = ["accessibility", "gui", "localization", "internationalization"]
 
+[features]
+freya = []
+
+[[example]]
+name = "freya"
+required-features = ["freya"]
+
 [dependencies]
 dioxus = { version = "0.7", default-features = false, features = [
     "hooks",
