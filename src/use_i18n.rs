@@ -1,18 +1,16 @@
 use super::error::Error;
 
+use std::{collections::HashMap, convert::Infallible};
+
 use dioxus::prelude::*;
 use fluent::{FluentArgs, FluentBundle, FluentResource};
 use unic_langid::LanguageIdentifier;
 
 #[cfg(not(target_arch = "wasm32"))]
+use std::path::{Path, PathBuf};
+#[cfg(not(target_arch = "wasm32"))]
 use walkdir::WalkDir;
 
-use std::{collections::HashMap, convert::Infallible};
-
-#[cfg(not(target_arch = "wasm32"))]
-use std::path::{Path, PathBuf};
-
-/// `Locale` is a "place-holder" around what will eventually be a `fluent::FluentBundle`
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct Locale {
     id: LanguageIdentifier,
