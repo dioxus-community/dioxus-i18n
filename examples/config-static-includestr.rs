@@ -1,4 +1,4 @@
-//! This example demonstrates how to use pathbuf derived I18nConfig.
+//! This example demonstrates an I18nConfig built from embedded Fluent resources.
 //! This is useful for WASM targets; the paths to the translation files must be known at compile time.
 
 use dioxus::prelude::*;
