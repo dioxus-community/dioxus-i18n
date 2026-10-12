@@ -13,6 +13,14 @@ pub(crate) fn test_hook<V: 'static>(
     initialize: impl FnMut() -> V + 'static,
     check: impl FnMut(V, &mut Assertions) + 'static,
 ) {
+    test_hook_after_first_render(initialize, check, || {});
+}
+
+pub(crate) fn test_hook_after_first_render<V: 'static>(
+    initialize: impl FnMut() -> V + 'static,
+    check: impl FnMut(V, &mut Assertions) + 'static,
+    after_first_render: impl FnOnce(),
+) {
     #[derive(Props)]
     struct MockAppComponent<I: 'static, C: 'static> {
         hook: Rc<RefCell<I>>,
@@ -55,11 +63,11 @@ pub(crate) fn test_hook<V: 'static>(
     );
 
     vdom.rebuild_in_place();
+    after_first_render();
 
     while vdom.wait_for_work().now_or_never().is_some() {
         vdom.render_immediate(&mut NoOpMutations);
     }
-
 }
 
 #[derive(Debug)]

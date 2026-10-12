@@ -3,7 +3,10 @@
     windows_subsystem = "windows"
 )]
 
-use dioxus_i18n::{prelude::*, t};
+//! Run with `cargo run --example freya --features freya`.
+
+use dioxus_i18n::prelude::{i18n, use_init_i18n, I18nConfig};
+use dioxus_i18n::t;
 use freya::prelude::*;
 use unic_langid::langid;
 
@@ -13,10 +16,9 @@ fn main() {
     launch_with_props(app, "freya + i18n", (300.0, 200.0));
 }
 
-#[allow(non_snake_case)]
+#[component]
 fn Body() -> Element {
     let mut i18n = i18n();
-
     let change_to_english = move |_| i18n.set_language(langid!("en-US"));
     let change_to_spanish = move |_| i18n.set_language(langid!("es-ES"));
 
@@ -53,5 +55,5 @@ fn app() -> Element {
             ))
     });
 
-    rsx!(Body {})
+    rsx! { Body {} }
 }
