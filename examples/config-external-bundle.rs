@@ -30,15 +30,15 @@ fn create_bundle(language: LanguageIdentifier, source: &str) -> FluentBundle<Flu
 
 #[component]
 fn Body() -> Element {
-    let mut i18 = i18n_bundle();
+    let mut i18n = i18n_bundle();
     let en = move |_| {
-        i18.set_bundle(create_bundle(
+        i18n.set_bundle(create_bundle(
             langid!("en-US"),
             include_str!("./data/i18n/en-US.ftl"),
         ));
     };
     let es = move |_| {
-        i18.set_bundle(create_bundle(
+        i18n.set_bundle(create_bundle(
             langid!("es-ES"),
             include_str!("./data/i18n/es-ES.ftl"),
         ));

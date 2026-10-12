@@ -25,7 +25,7 @@ hello = Hello, {$name}!
 // main.rs
 
 fn app() -> Element {
-    let i18 = use_init_i18n(|| {
+    let i18n = use_init_i18n(|| {
         I18nConfig::new(langid!("en-US"))
             // implicit [`Locale`]
             .with_locale(( // Embed
