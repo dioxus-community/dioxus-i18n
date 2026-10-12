@@ -211,6 +211,26 @@ fn fail_translate_with_invalid_attribute_key() {
 }
 
 #[test]
+fn malformed_message_references_are_rejected() {
+    test_hook(i18n_from_static, |i18n, proxy| {
+        for reference in ["", ".placeholder", "my_component."] {
+            let error = i18n
+                .try_translate(reference)
+                .expect_err("malformed compact reference must be rejected");
+
+            proxy.assert(
+                matches!(
+                    error,
+                    DioxusI18nError::InvalidMessageId(ref id) if id == reference
+                ),
+                true,
+                "malformed_message_references_are_rejected",
+            );
+        }
+    });
+}
+
+#[test]
 fn attribute_only_message_reports_missing_value_pattern() {
     test_hook(i18n_from_static, |value, proxy| {
         let error = value

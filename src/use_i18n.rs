@@ -419,13 +419,29 @@ impl I18nBundle {
     }
 }
 
+fn parse_message_reference(msg: &str) -> Result<(&str, Option<&str>), Error> {
+    let invalid = || Error::InvalidMessageId(msg.to_string());
+
+    match msg.split_once('.') {
+        None if !msg.is_empty() => Ok((msg, None)),
+        Some((message_id, attribute_name))
+            if !message_id.is_empty()
+                && !attribute_name.is_empty()
+                && !attribute_name.contains('.') =>
+        {
+            Ok((message_id, Some(attribute_name)))
+        }
+        _ => Err(invalid()),
+    }
+}
+
 impl I18nContext {
     pub(crate) fn try_translate_with_args(
         &self,
         msg: &str,
         args: Option<&FluentArgs>,
     ) -> Result<String, Error> {
-        let (message_id, attribute_name) = I18n::decompose_identifier(msg)?;
+        let (message_id, attribute_name) = parse_message_reference(msg)?;
 
         let bundle = self.active_bundle.read();
 
@@ -509,15 +525,6 @@ impl I18n {
         self.context
             .primary_language()
             .expect("a managed bundle always retains its selected language")
-    }
-
-    pub fn decompose_identifier(msg: &str) -> Result<(&str, Option<&str>), Error> {
-        let parts: Vec<&str> = msg.split('.').collect();
-        match parts.as_slice() {
-            [message_id] => Ok((message_id, None)),
-            [message_id, attribute_name] => Ok((message_id, Some(attribute_name))),
-            _ => Err(Error::InvalidMessageId(msg.to_string())),
-        }
     }
 }
 
