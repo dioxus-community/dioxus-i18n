@@ -1,6 +1,6 @@
 [package]
 name = "dioxus-i18n"
-version = "0.5.1"
+version = "0.6.0"
 edition = "2021"
 authors = ["Marc Espín <mespinsanz@gmail.com>"]
 description = "i18n integration for Dioxus apps based on Fluent Project."
@@ -20,10 +20,9 @@ thiserror = "2.0"
 unic-langid = { version = "0.9", features = ["macros"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-walkdir = "2.5.0"
+walkdir = "2.5"
 
 [dev-dependencies]
 dioxus = { version = "0.7", features = ["desktop"] }
-futures = "0.3.31"
-pretty_assertions = "1.4.1"
-unic-langid = { version = "0.9.5", features = ["macros"] }
+futures = "0.3"
+pretty_assertions = "1.4"
