@@ -1,5 +1,55 @@
 # Changelog
 
+## [0.6.0] 2026-10-12
+
+### Added
+
+- Added `use_init_i18n_from_bundle` and `try_use_init_i18n_from_bundle` for applications that
+  construct and configure their own Fluent bundles.
+- Added the `I18nBundle` controller and `i18n_bundle` context accessor for translating with and
+  reactively replacing an externally configured bundle.
+- Added an external-bundle example that also demonstrates testing Fluent configuration without a
+  Dioxus runtime.
+
+### Changed
+
+- Managed and external providers now share the translation context used by `t!`, `te!`, and
+  `tid!`.
+- Managed language and fallback changes build the replacement bundle before publishing the new
+  selection, preserving the previous valid state if construction fails.
+- Compact `message.attribute` references are parsed without allocating and malformed references
+  are rejected explicitly.
+- Updated documentation and examples for the current Dioxus configuration and platform APIs.
+
+### Breaking
+
+- Removed public `I18n::new` and `I18n::try_new` construction. Initialize a managed provider with
+  `use_init_i18n` or `try_use_init_i18n` so the controller and translation context are installed
+  together.
+- Removed public `I18n::decompose_identifier`; compact message-reference parsing is now an
+  implementation detail.
+
+Before:
+
+```rust
+let i18n = I18n::try_new(language, fallback, resources, locales)?;
+use_context_provider(|| i18n);
+```
+
+After:
+
+```rust
+let i18n = try_use_init_i18n(|| {
+    I18nConfig::new(language)
+        .with_locale((langid!("en-US"), include_str!("./en-US.ftl")))
+})?;
+```
+
+### Removed
+
+- Removed the unmaintained Freya example and development dependency. The library remains
+  renderer-independent across supported Dioxus platforms.
+
 ## [0.4.3]
 
 - [Issue #19](https://github.com/dioxus-community/dioxus-i18n/issues/19) Enable use of "message-id.attribute-id"
