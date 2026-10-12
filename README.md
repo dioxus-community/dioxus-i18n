@@ -1,16 +1,11 @@
 # dioxus-i18n 🌍
 
-i18n integration for Dioxus apps based on the [Project Fluent](https://github.com/projectfluent/fluent-rs).
-
-> This crate used to be in the [Dioxus SDK](https://github.com/DioxusLabs/sdk).
+Dioxus internationalization powered by [Project Fluent](https://github.com/projectfluent/fluent-rs).
 
 ## Support
 
 - **Dioxus v0.7** 🧬
-- Renderers:
-  - [web](https://dioxuslabs.com/learn/0.7/guides/web/),
-  - [desktop](https://dioxuslabs.com/learn/0.7/guides/desktop/),
-- Both WASM and native targets
+- Dioxus [platform support](https://dioxuslabs.com/learn/0.7/guides/platforms/)
 
 ## Example:
 
@@ -20,56 +15,83 @@ i18n integration for Dioxus apps based on the [Project Fluent](https://github.co
 hello = Hello, {$name}!
 ```
 
-```rs
-// main.rs
+```ftl
+# es-ES.ftl
 
+hello = ¡Hola, {$name}!
+```
+
+```rs
 fn app() -> Element {
     let i18n = use_init_i18n(|| {
         I18nConfig::new(langid!("en-US"))
-            // implicit [`Locale`]
-            .with_locale(( // Embed
-                langid!("en-US"),
-                include_str!("./en-US.ftl")
-            ))
-            .with_locale(( // Load at launch
-                langid!("es-ES"),
-                PathBuf::from("./es-ES.ftl"),
-            ))
-            .with_locale((     // Locales will share duplicated locale_resources
-                langid!("en"), // which is useful to assign a specific region for
-                include_str!("./en-US.ftl") // the primary language
-            ))
-            // explicit [`Locale`]
-            .with_locale(Locale::new_static( // Embed
-                langid!("en-US"),
-                include_str!("./en-US.ftl"),
-            ))
-            .with_locale(Locale::new_dynamic( // Load at launch
-                langid!("es-ES"),
-                PathBuf::from("./es-ES.ftl"),
-            ))
+            .with_locale((langid!("en-US"), include_str!("./en-US.ftl")))
+            .with_locale((langid!("es-ES"), include_str!("./es-ES.ftl")))
     });
 
-    rsx!(
+    rsx! {
         label { { t!("hello", name: "World") } }
-    )
+    }
 }
 ```
 
-## Further examples
+### Config examples
 
-The examples folder contains a number of working examples:
+Load resources from the filesystem at launch on native targets:
 
-* Desktop examples:
-  * [Dioxus](./examples/dioxus-desktop.rs)
-* Configuration variants:
-  * [Auto locales](./examples/config-auto-locales.rs)
-  * [Dynamic (PathBuf)](./examples/config-dynamic-pathbuf.rs)
-  * [Static (include_str!)](./examples/config-static-includestr.rs)
-  * [External Fluent bundle](./examples/config-external-bundle.rs)
-* Fluent grammar:
-  * [Application](./examples/fluent-grammar.rs)
-  * [FTL file](./examples/data/fluent/en.ftl)
+```rs
+use_init_i18n(|| {
+    I18nConfig::new(langid!("en-US"))
+        .with_locale((langid!("en-US"), include_str!("./en-US.ftl")))
+        .with_locale((langid!("es-ES"), PathBuf::from("./es-ES.ftl")))
+});
+```
+
+Share one embedded resource between locale identifiers:
+
+```rs
+use_init_i18n(|| {
+    I18nConfig::new(langid!("en-US"))
+        .with_locale((langid!("en-US"), include_str!("./en-US.ftl")))
+        .with_locale((langid!("en"), include_str!("./en-US.ftl")))
+});
+```
+
+Construct locales explicitly:
+
+```rs
+use_init_i18n(|| {
+    I18nConfig::new(langid!("en-US"))
+        .with_locale(Locale::new_static(
+            langid!("en-US"),
+            include_str!("./en-US.ftl"),
+        ))
+        .with_locale(Locale::new_dynamic(
+            langid!("es-ES"),
+            PathBuf::from("./es-ES.ftl"),
+        ))
+});
+```
+
+Provide an application-configured Fluent bundle:
+
+```rs
+use_init_i18n_from_bundle(|| {
+    create_bundle(langid!("en-US"), include_str!("./en-US.ftl"))
+});
+```
+
+## More examples
+
+- Configuration:
+  - [Auto locales](./examples/config-auto-locales.rs)
+  - [Dynamic (`PathBuf`)](./examples/config-dynamic-pathbuf.rs)
+  - [Static (`include_str!`)](./examples/config-static-includestr.rs)
+  - [External Fluent bundle](./examples/config-external-bundle.rs)
+- Applications:
+  - [Dioxus desktop](./examples/dioxus-desktop.rs)
+  - Fluent grammar: [application](./examples/fluent-grammar.rs) and
+    [FTL file](./examples/data/fluent/en.ftl)
 
 ## Development
 
@@ -77,8 +99,11 @@ The examples folder contains a number of working examples:
 # Checks clean compile against `#[cfg(not(target_arch = "wasm32"))]`
 cargo build --target wasm32-unknown-unknown
 
-# Runs all tests
+cargo fmt --all -- --check
+cargo clippy --all-targets -- -D warnings
 cargo test
 ```
+
+`dioxus-i18n` was originally part of the [Dioxus SDK](https://github.com/DioxusLabs/sdk).
 
 [MIT License](./LICENSE.md)
