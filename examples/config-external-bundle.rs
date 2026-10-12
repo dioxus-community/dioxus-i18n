@@ -1,19 +1,16 @@
 //! Supply complete, application-configured Fluent bundles to Dioxus.
 //!
 //! This form is useful when the application owns resource composition, fallback order, or other
-//! Fluent configuration. [`use_init_i18n_from_bundle`] provides the ordinary [`I18n`] reader
-//! through Dioxus context and returns an [`ExternalBundleHandle`], which can replace the complete
-//! bundle with one reactive update.
+//! Fluent configuration. [`use_init_i18n_from_bundle`] provides an `I18nBundle` through Dioxus
+//! context, which can translate and replace the complete bundle with one reactive update.
 //!
 //! Parsing resources, composing fallbacks, and configuring the bundle remain the application's
 //! responsibility; the Dioxus adapter stores and reactively replaces the completed bundle.
 
 use dioxus::prelude::*;
-use dioxus_i18n::{
-    fluent::{FluentBundle, FluentResource},
-    prelude::*,
-    t,
-};
+use dioxus_i18n::fluent::{FluentBundle, FluentResource};
+use dioxus_i18n::prelude::{i18n_bundle, use_init_i18n_from_bundle};
+use dioxus_i18n::t;
 use unic_langid::{langid, LanguageIdentifier};
 
 fn main() {
@@ -31,10 +28,9 @@ fn create_bundle(language: LanguageIdentifier, source: &str) -> FluentBundle<Flu
     bundle
 }
 
-fn app() -> Element {
-    let mut i18 = use_init_i18n_from_bundle(|| {
-        create_bundle(langid!("en-US"), include_str!("./data/i18n/en-US.ftl"))
-    });
+#[component]
+fn Body() -> Element {
+    let mut i18 = i18n_bundle();
     let en = move |_| {
         i18.set_bundle(create_bundle(
             langid!("en-US"),
@@ -60,4 +56,12 @@ fn app() -> Element {
         p { { t!("hello_world") } }
         p { { t!("hello", name: "Dioxus") } }
     }
+}
+
+fn app() -> Element {
+    use_init_i18n_from_bundle(|| {
+        create_bundle(langid!("en-US"), include_str!("./data/i18n/en-US.ftl"))
+    });
+
+    rsx! { Body {} }
 }

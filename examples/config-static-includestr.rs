@@ -2,17 +2,17 @@
 //! This is useful for WASM targets; the paths to the translation files must be known at compile time.
 
 use dioxus::prelude::*;
-use dioxus_i18n::{prelude::*, t};
+use dioxus_i18n::prelude::{i18n, use_init_i18n, I18nConfig, Locale};
+use dioxus_i18n::t;
 use unic_langid::langid;
 
 fn main() {
     launch(app);
 }
 
-#[allow(non_snake_case)]
+#[component]
 fn Body() -> Element {
     let mut i18n = i18n();
-
     let change_to_english = move |_| i18n.set_language(langid!("en-US"));
     let change_to_spanish = move |_| i18n.set_language(langid!("es-ES"));
 
@@ -53,5 +53,5 @@ fn app() -> Element {
             ))
     });
 
-    rsx!(Body {})
+    rsx! { Body {} }
 }

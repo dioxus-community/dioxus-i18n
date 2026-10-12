@@ -34,12 +34,12 @@ macro_rules! te {
             $(
                 params_map.set(stringify!($name), $value);
             )*
-            $crate::prelude::i18n().try_translate_with_args($id, Some(&params_map))
+            $crate::__private::try_translate_with_args_from_context($id, Some(&params_map))
         }
     };
 
     ($id:expr ) => {{
-            $crate::prelude::i18n().try_translate($id)
+            $crate::__private::try_translate_from_context($id)
     }};
 }
 

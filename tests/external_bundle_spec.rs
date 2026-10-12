@@ -3,7 +3,7 @@ use common::test_hook::test_hook_after_first_render;
 use common::*;
 
 use dioxus_i18n::{
-    prelude::{i18n, use_init_i18n_from_bundle, DioxusI18nError, ExternalBundleHandle},
+    prelude::{i18n_bundle, use_init_i18n_from_bundle, I18nBundle},
     t,
 };
 use fluent::{FluentBundle, FluentResource};
@@ -15,7 +15,6 @@ use std::{
 };
 
 const EN: LanguageIdentifier = langid!("en");
-const DE: LanguageIdentifier = langid!("de");
 
 #[test]
 fn bundle_hook_provides_configured_bundle_through_context() {
@@ -32,52 +31,25 @@ fn bundle_hook_provides_configured_bundle_through_context() {
 #[test]
 fn externally_configured_bundle_accepts_an_empty_locale_list() {
     test_hook(
-        || use_init_i18n_from_bundle(|| bundle_without_locale("simple = Locale-free value")),
-        |_, proxy| {
+        || {
+            use_init_i18n_from_bundle(|| bundle_without_locale("simple = Locale-free value"));
+            i18n_bundle()
+        },
+        |i18n, proxy| {
             proxy.assert(
-                i18n().language(),
-                LanguageIdentifier::default(),
-                "external_bundle_without_locale_uses_default_language",
+                i18n.primary_language(),
+                None,
+                "external_bundle_without_locale_has_no_primary_language",
+            );
+            proxy.assert(
+                i18n.translate("simple"),
+                "Locale-free value".to_string(),
+                "external_bundle_handle_translates",
             );
             proxy.assert(
                 t!("simple"),
                 "Locale-free value".to_string(),
                 "external_bundle_without_locale_translates",
-            );
-        },
-    );
-}
-
-#[test]
-fn resource_driven_language_setters_reject_an_external_bundle() {
-    test_hook(
-        || {
-            use_english_bundle();
-            i18n()
-        },
-        |mut value, proxy| {
-            proxy.assert(
-                matches!(
-                    value.try_set_language(DE),
-                    Err(DioxusI18nError::InvalidLanguageId(_))
-                ),
-                true,
-                "external_bundle_rejects_language_setter",
-            );
-            proxy.assert(
-                matches!(
-                    value.try_set_fallback_language(DE),
-                    Err(DioxusI18nError::InvalidLanguageId(_))
-                ),
-                true,
-                "external_bundle_rejects_fallback_setter",
-            );
-            proxy.assert(
-                value
-                    .try_translate("simple")
-                    .expect("rejected setters must leave the bundle active"),
-                "Hello, Zaphod!".to_string(),
-                "external_bundle_rejected_setters_preserve_state",
             );
         },
     );
@@ -93,9 +65,13 @@ fn replacing_an_external_bundle_rerenders_consumers_atomically() {
     test_hook_after_first_render(
         move || {
             let bundle_handle = use_english_bundle();
-            let i18n = i18n();
             hook_bundle_handle.set(Some(bundle_handle));
-            (i18n.language().to_string(), t!("simple"))
+            (
+                i18n_bundle()
+                    .primary_language()
+                    .map(|language| language.to_string()),
+                t!("simple"),
+            )
         },
         move |render, _| observed_renders.borrow_mut().push(render),
         move || {
@@ -109,16 +85,13 @@ fn replacing_an_external_bundle_rerenders_consumers_atomically() {
     assert_eq!(
         *renders.borrow(),
         [
-            ("en".to_string(), "Hello, Zaphod!".to_string()),
-            (
-                LanguageIdentifier::default().to_string(),
-                "Locale-free value".to_string()
-            ),
+            (Some("en".to_string()), "Hello, Zaphod!".to_string()),
+            (None, "Locale-free value".to_string()),
         ]
     );
 }
 
-fn use_english_bundle() -> ExternalBundleHandle {
+fn use_english_bundle() -> I18nBundle {
     use_init_i18n_from_bundle(english_bundle)
 }
 

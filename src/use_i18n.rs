@@ -89,7 +89,8 @@ impl From<PathBuf> for LocaleResource {
 /// The configuration for `I18n`.
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub struct I18nConfig {
-    /// The initial language, can be later changed with [`I18n::set_language`]
+    /// The initial language, which can later be changed with
+    /// [`I18n::set_language`].
     id: LanguageIdentifier,
 
     /// The final fallback language if no other locales are found for `id`.
@@ -225,34 +226,21 @@ fn is_ftl_file(entry: &Path) -> bool {
 
 /// Initialize an i18n provider.
 pub fn try_use_init_i18n(init: impl FnOnce() -> I18nConfig) -> Result<I18n, Error> {
-    use_context_provider(move || {
-        // Coverage false -ve: See https://github.com/xd009642/tarpaulin/issues/1675
-        let I18nConfig {
-            id,
-            fallback,
-            locale_resources,
-            locales,
-        } = init();
-
-        I18n::try_new(id, fallback, locale_resources, locales)
+    use_hook(move || {
+        let i18n = I18n::try_from_config(init())?;
+        provide_context(i18n.context);
+        provide_context(i18n);
+        Ok(i18n)
     })
 }
 
 /// Initialize an i18n provider.
 pub fn use_init_i18n(init: impl FnOnce() -> I18nConfig) -> I18n {
-    use_context_provider(move || {
-        // Coverage false -ve: See https://github.com/xd009642/tarpaulin/issues/1675
-        let I18nConfig {
-            id,
-            fallback,
-            locale_resources,
-            locales,
-        } = init();
-
-        match I18n::try_new(id, fallback, locale_resources, locales) {
-            Ok(i18n) => i18n,
-            Err(e) => panic!("Failed to create I18n context: {}", e),
-        }
+    use_hook(move || {
+        let i18n = I18n::from_config(init());
+        provide_context(i18n.context);
+        provide_context(i18n);
+        i18n
     })
 }
 
@@ -262,54 +250,148 @@ pub fn use_init_i18n(init: impl FnOnce() -> I18nConfig) -> I18n {
 /// completed by the caller before this hook receives the bundle.
 pub fn use_init_i18n_from_bundle(
     init: impl FnOnce() -> FluentBundle<FluentResource>,
-) -> ExternalBundleHandle {
+) -> I18nBundle {
     use_hook(move || {
-        let handle = ExternalBundleHandle::new(init());
-        provide_context(handle.i18n());
-        handle
+        let i18n = I18nBundle::new(init());
+        provide_context(i18n.context);
+        provide_context(i18n);
+        i18n
     })
 }
 
 #[derive(Clone, Copy)]
-pub struct I18n {
-    source: I18nSource,
+pub(crate) struct I18nContext {
+    active_bundle: ReadSignal<FluentBundle<FluentResource>>,
 }
 
-#[derive(Clone, Copy)]
-enum I18nSource {
-    ManagedBundle(ManagedBundleState),
-    ExternalBundle {
-        active_bundle: Signal<FluentBundle<FluentResource>>,
-    },
-}
-
-#[derive(Clone, Copy)]
 struct ManagedBundleState {
-    selected_language: Signal<LanguageIdentifier>,
-    fallback_language: Signal<Option<LanguageIdentifier>>,
-    locale_resources: Signal<Vec<LocaleResource>>,
-    locales: Signal<HashMap<LanguageIdentifier, usize>>,
-    active_bundle: Signal<FluentBundle<FluentResource>>,
+    bundle: FluentBundle<FluentResource>,
+    fallback: Option<LanguageIdentifier>,
+}
+
+struct ManagedBundleResources {
+    locale_resources: Vec<LocaleResource>,
+    locales: HashMap<LanguageIdentifier, usize>,
+}
+
+/// An i18n provider managed from [`I18nConfig`] resources.
+#[derive(Clone, Copy)]
+pub struct I18n {
+    context: I18nContext,
+    state: Signal<ManagedBundleState>,
+    resources: Signal<ManagedBundleResources>,
+}
+
+impl I18n {
+    fn try_from_config(config: I18nConfig) -> Result<Self, Error> {
+        let I18nConfig {
+            id,
+            fallback,
+            locale_resources,
+            locales,
+        } = config;
+        let bundle = try_create_bundle(&id, &fallback, &locale_resources, &locales)?;
+
+        let state = Signal::new(ManagedBundleState { bundle, fallback });
+
+        Ok(Self {
+            context: I18nContext {
+                active_bundle: state.map(|state| &state.bundle).into(),
+            },
+            state,
+            resources: Signal::new(ManagedBundleResources {
+                locale_resources,
+                locales,
+            }),
+        })
+    }
+
+    fn from_config(config: I18nConfig) -> Self {
+        Self::try_from_config(config)
+            .unwrap_or_else(|error| panic!("Failed to create I18n context: {}", error))
+    }
+
+    /// Get the configured fallback language.
+    pub fn fallback_language(&self) -> Option<LanguageIdentifier> {
+        self.state.read().fallback.clone()
+    }
+
+    /// Update the selected language.
+    pub fn try_set_language(&mut self, id: LanguageIdentifier) -> Result<(), Error> {
+        let fallback = self.state.peek().fallback.clone();
+        let resources = self.resources.peek();
+        let bundle = try_create_bundle(
+            &id,
+            &fallback,
+            &resources.locale_resources,
+            &resources.locales,
+        )?;
+        drop(resources);
+
+        self.state.set(ManagedBundleState { bundle, fallback });
+        Ok(())
+    }
+
+    /// Update the selected language.
+    pub fn set_language(&mut self, id: LanguageIdentifier) {
+        let id_name = id.to_string();
+        self.try_set_language(id)
+            .unwrap_or_else(|error| panic!("cannot set language {}: {}", id_name, error));
+    }
+
+    /// Update the fallback language.
+    pub fn try_set_fallback_language(&mut self, id: LanguageIdentifier) -> Result<(), Error> {
+        let resources = self.resources.peek();
+        resources
+            .locales
+            .get(&id)
+            .ok_or_else(|| Error::FallbackMustHaveLocale(id.to_string()))?;
+
+        let selected_language = self
+            .state
+            .peek()
+            .bundle
+            .locales
+            .first()
+            .cloned()
+            .expect("a managed bundle always retains its selected language");
+        let fallback = Some(id);
+        let bundle = try_create_bundle(
+            &selected_language,
+            &fallback,
+            &resources.locale_resources,
+            &resources.locales,
+        )?;
+        drop(resources);
+
+        self.state.set(ManagedBundleState { bundle, fallback });
+        Ok(())
+    }
+
+    /// Update the fallback language.
+    pub fn set_fallback_language(&mut self, id: LanguageIdentifier) {
+        let id_name = id.to_string();
+        self.try_set_fallback_language(id)
+            .unwrap_or_else(|error| panic!("cannot set fallback language {}: {}", id_name, error));
+    }
 }
 
 /// A capability for replacing an externally configured Fluent bundle.
 #[derive(Clone, Copy)]
-pub struct ExternalBundleHandle {
+pub struct I18nBundle {
+    context: I18nContext,
     active_bundle: Signal<FluentBundle<FluentResource>>,
 }
 
-impl ExternalBundleHandle {
+impl I18nBundle {
     fn new(bundle: FluentBundle<FluentResource>) -> Self {
-        Self {
-            active_bundle: Signal::new(bundle),
-        }
-    }
+        let active_bundle = Signal::new(bundle);
 
-    fn i18n(self) -> I18n {
-        I18n {
-            source: I18nSource::ExternalBundle {
-                active_bundle: self.active_bundle,
+        Self {
+            context: I18nContext {
+                active_bundle: active_bundle.into(),
             },
+            active_bundle,
         }
     }
 
@@ -319,57 +401,15 @@ impl ExternalBundleHandle {
     }
 }
 
-impl I18n {
-    pub fn try_new(
-        selected_language: LanguageIdentifier,
-        fallback_language: Option<LanguageIdentifier>,
-        locale_resources: Vec<LocaleResource>,
-        locales: HashMap<LanguageIdentifier, usize>,
-    ) -> Result<Self, Error> {
-        let bundle = try_create_bundle(
-            &selected_language,
-            &fallback_language,
-            &locale_resources,
-            &locales,
-        )?;
-        Ok(Self {
-            source: I18nSource::ManagedBundle(ManagedBundleState {
-                selected_language: Signal::new(selected_language),
-                fallback_language: Signal::new(fallback_language),
-                locale_resources: Signal::new(locale_resources),
-                locales: Signal::new(locales),
-                active_bundle: Signal::new(bundle),
-            }),
-        })
-    }
-
-    pub fn new(
-        selected_language: LanguageIdentifier,
-        fallback_language: Option<LanguageIdentifier>,
-        locale_resources: Vec<LocaleResource>,
-        locales: HashMap<LanguageIdentifier, usize>,
-    ) -> Self {
-        let result = Self::try_new(
-            selected_language,
-            fallback_language,
-            locale_resources,
-            locales,
-        );
-        match result {
-            Ok(i18n) => i18n,
-            Err(err) => panic!("I18n cannot be created: {}", err),
-        }
-    }
-
-    pub fn try_translate_with_args(
+impl I18nContext {
+    pub(crate) fn try_translate_with_args(
         &self,
         msg: &str,
         args: Option<&FluentArgs>,
     ) -> Result<String, Error> {
-        let (message_id, attribute_name) = Self::decompose_identifier(msg)?;
+        let (message_id, attribute_name) = I18n::decompose_identifier(msg)?;
 
-        let active_bundle = self.active_bundle();
-        let bundle = active_bundle.read();
+        let bundle = self.active_bundle.read();
 
         let message = bundle
             .get_message(message_id)
@@ -396,16 +436,7 @@ impl I18n {
             .ok_or_else(|| Error::FluentErrorsDetected(format!("{:#?}", errors)))
     }
 
-    pub fn decompose_identifier(msg: &str) -> Result<(&str, Option<&str>), Error> {
-        let parts: Vec<&str> = msg.split('.').collect();
-        match parts.as_slice() {
-            [message_id] => Ok((message_id, None)),
-            [message_id, attribute_name] => Ok((message_id, Some(attribute_name))),
-            _ => Err(Error::InvalidMessageId(msg.to_string())),
-        }
-    }
-
-    pub fn translate_with_args(&self, msg: &str, args: Option<&FluentArgs>) -> String {
+    fn translate_with_args(&self, msg: &str, args: Option<&FluentArgs>) -> String {
         let result = self.try_translate_with_args(msg, args);
         match result {
             Ok(translation) => translation,
@@ -414,11 +445,11 @@ impl I18n {
     }
 
     #[inline]
-    pub fn try_translate(&self, msg: &str) -> Result<String, Error> {
+    pub(crate) fn try_translate(&self, msg: &str) -> Result<String, Error> {
         self.try_translate_with_args(msg, None)
     }
 
-    pub fn translate(&self, msg: &str) -> String {
+    fn translate(&self, msg: &str) -> String {
         let result = self.try_translate(msg);
         match result {
             Ok(translation) => translation,
@@ -426,109 +457,78 @@ impl I18n {
         }
     }
 
-    /// Get the selected language.
-    ///
-    /// An externally configured bundle uses its first locale, or the default
-    /// [`LanguageIdentifier`] if its locale list is empty.
+    /// Get the primary language declared by the active Fluent bundle.
     #[inline]
+    fn primary_language(&self) -> Option<LanguageIdentifier> {
+        self.active_bundle.read().locales.first().cloned()
+    }
+}
+
+impl I18n {
+    pub fn try_translate_with_args(
+        &self,
+        msg: &str,
+        args: Option<&FluentArgs>,
+    ) -> Result<String, Error> {
+        self.context.try_translate_with_args(msg, args)
+    }
+
+    pub fn translate_with_args(&self, msg: &str, args: Option<&FluentArgs>) -> String {
+        self.context.translate_with_args(msg, args)
+    }
+
+    #[inline]
+    pub fn try_translate(&self, msg: &str) -> Result<String, Error> {
+        self.context.try_translate(msg)
+    }
+
+    pub fn translate(&self, msg: &str) -> String {
+        self.context.translate(msg)
+    }
+
+    /// Get the selected language.
     pub fn language(&self) -> LanguageIdentifier {
-        match self.source {
-            I18nSource::ManagedBundle(managed) => managed.selected_language.read().clone(),
-            I18nSource::ExternalBundle { active_bundle } => active_bundle
-                .read()
-                .locales
-                .first()
-                .cloned()
-                .unwrap_or_default(),
-        }
+        self.context
+            .primary_language()
+            .expect("a managed bundle always retains its selected language")
     }
 
-    /// Get the fallback language.
-    pub fn fallback_language(&self) -> Option<LanguageIdentifier> {
-        match self.source {
-            I18nSource::ManagedBundle(managed) => managed.fallback_language.read().clone(),
-            I18nSource::ExternalBundle { .. } => None,
-        }
-    }
-
-    /// Update the selected language.
-    pub fn try_set_language(&mut self, id: LanguageIdentifier) -> Result<(), Error> {
-        match self.source {
-            I18nSource::ManagedBundle(mut managed) => managed.try_set_language(id),
-            I18nSource::ExternalBundle { .. } => Err(external_bundle_owns_language()),
-        }
-    }
-
-    /// Update the selected language.
-    pub fn set_language(&mut self, id: LanguageIdentifier) {
-        let id_name = id.to_string();
-        let result = self.try_set_language(id);
-        match result {
-            Ok(()) => (),
-            Err(err) => panic!("cannot set language {}: {}", id_name, err),
-        }
-    }
-
-    /// Update the fallback language.
-    pub fn try_set_fallback_language(&mut self, id: LanguageIdentifier) -> Result<(), Error> {
-        match self.source {
-            I18nSource::ManagedBundle(mut managed) => managed.try_set_fallback_language(id),
-            I18nSource::ExternalBundle { .. } => Err(external_bundle_owns_language()),
-        }
-    }
-
-    /// Update the fallback language.
-    pub fn set_fallback_language(&mut self, id: LanguageIdentifier) {
-        let id_name = id.to_string();
-        let result = self.try_set_fallback_language(id);
-        match result {
-            Ok(()) => (),
-            Err(err) => panic!("cannot set fallback language {}: {}", id_name, err),
-        }
-    }
-
-    fn active_bundle(&self) -> Signal<FluentBundle<FluentResource>> {
-        match self.source {
-            I18nSource::ManagedBundle(managed) => managed.active_bundle,
-            I18nSource::ExternalBundle { active_bundle } => active_bundle,
+    pub fn decompose_identifier(msg: &str) -> Result<(&str, Option<&str>), Error> {
+        let parts: Vec<&str> = msg.split('.').collect();
+        match parts.as_slice() {
+            [message_id] => Ok((message_id, None)),
+            [message_id, attribute_name] => Ok((message_id, Some(attribute_name))),
+            _ => Err(Error::InvalidMessageId(msg.to_string())),
         }
     }
 }
 
-impl ManagedBundleState {
-    fn try_set_language(&mut self, id: LanguageIdentifier) -> Result<(), Error> {
-        *self.selected_language.write() = id;
-        self.try_update_active_bundle()
+impl I18nBundle {
+    pub fn try_translate_with_args(
+        &self,
+        msg: &str,
+        args: Option<&FluentArgs>,
+    ) -> Result<String, Error> {
+        self.context.try_translate_with_args(msg, args)
     }
 
-    fn try_set_fallback_language(&mut self, id: LanguageIdentifier) -> Result<(), Error> {
-        self.locales
-            .read()
-            .get(&id)
-            .ok_or_else(|| Error::FallbackMustHaveLocale(id.to_string()))?;
-
-        *self.fallback_language.write() = Some(id);
-        self.try_update_active_bundle()
+    pub fn translate_with_args(&self, msg: &str, args: Option<&FluentArgs>) -> String {
+        self.context.translate_with_args(msg, args)
     }
 
-    fn try_update_active_bundle(&mut self) -> Result<(), Error> {
-        let bundle = try_create_bundle(
-            &self.selected_language.peek(),
-            &self.fallback_language.peek(),
-            &self.locale_resources.peek(),
-            &self.locales.peek(),
-        )?;
-
-        self.active_bundle.set(bundle);
-        Ok(())
+    #[inline]
+    pub fn try_translate(&self, msg: &str) -> Result<String, Error> {
+        self.context.try_translate(msg)
     }
-}
 
-fn external_bundle_owns_language() -> Error {
-    Error::InvalidLanguageId(
-        "language is owned by the externally configured Fluent bundle; replace the bundle instead"
-            .into(),
-    )
+    pub fn translate(&self, msg: &str) -> String {
+        self.context.translate(msg)
+    }
+
+    /// Get the primary language declared by the active Fluent bundle.
+    pub fn primary_language(&self) -> Option<LanguageIdentifier> {
+        self.context.primary_language()
+    }
 }
 
 fn try_create_bundle(
@@ -579,6 +579,10 @@ fn try_create_bundle(
 }
 
 pub fn i18n() -> I18n {
+    consume_context()
+}
+
+pub fn i18n_bundle() -> I18nBundle {
     consume_context()
 }
 
