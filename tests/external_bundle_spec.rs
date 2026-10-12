@@ -2,8 +2,9 @@ mod common;
 use common::test_hook::test_hook_after_first_render;
 use common::*;
 
+use dioxus::core::try_consume_context;
 use dioxus_i18n::{
-    prelude::{i18n_bundle, use_init_i18n_from_bundle, I18nBundle},
+    prelude::{i18n_bundle, try_use_init_i18n_from_bundle, use_init_i18n_from_bundle, I18nBundle},
     t,
 };
 use fluent::{FluentBundle, FluentResource};
@@ -50,6 +51,48 @@ fn externally_configured_bundle_accepts_an_empty_locale_list() {
                 t!("simple"),
                 "Locale-free value".to_string(),
                 "external_bundle_without_locale_translates",
+            );
+        },
+    );
+}
+
+#[test]
+fn fallible_bundle_hook_preserves_the_caller_error_and_provides_no_handle() {
+    test_hook(
+        || {
+            let error = try_use_init_i18n_from_bundle(|| {
+                Err::<FluentBundle<FluentResource>, _>("catalog construction failed")
+            })
+            .err();
+            (error, try_consume_context::<I18nBundle>().is_some())
+        },
+        |(error, has_handle), proxy| {
+            proxy.assert(
+                error,
+                Some("catalog construction failed"),
+                "fallible_bundle_hook_preserves_the_caller_error",
+            );
+            proxy.assert(
+                has_handle,
+                false,
+                "fallible_bundle_hook_provides_no_handle_on_failure",
+            );
+        },
+    );
+}
+
+#[test]
+fn fallible_bundle_hook_provides_the_completed_bundle_on_success() {
+    test_hook(
+        || {
+            try_use_init_i18n_from_bundle(|| Ok::<_, &'static str>(english_bundle()))
+                .expect("valid application bundle must initialize")
+        },
+        |i18n, proxy| {
+            proxy.assert(
+                i18n.translate("simple"),
+                "Hello, Zaphod!".to_string(),
+                "fallible_bundle_hook_provides_completed_bundle",
             );
         },
     );

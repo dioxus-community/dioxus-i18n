@@ -7,7 +7,7 @@ use unic_langid::LanguageIdentifier;
 #[cfg(not(target_arch = "wasm32"))]
 use walkdir::WalkDir;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, convert::Infallible};
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::{Path, PathBuf};
@@ -251,11 +251,29 @@ pub fn use_init_i18n(init: impl FnOnce() -> I18nConfig) -> I18n {
 pub fn use_init_i18n_from_bundle(
     init: impl FnOnce() -> FluentBundle<FluentResource>,
 ) -> I18nBundle {
+    match try_use_init_i18n_from_bundle(move || Ok::<_, Infallible>(init())) {
+        Ok(i18n) => i18n,
+        Err(error) => match error {},
+    }
+}
+
+/// Initialize an i18n provider from a fallibly constructed Fluent bundle.
+///
+/// The caller owns the error type and all bundle construction policy. On
+/// failure, the error is returned unchanged and no i18n context is provided.
+/// The error is `Clone + 'static` because Dioxus retains the hook result for
+/// subsequent renders.
+pub fn try_use_init_i18n_from_bundle<E>(
+    init: impl FnOnce() -> Result<FluentBundle<FluentResource>, E>,
+) -> Result<I18nBundle, E>
+where
+    E: Clone + 'static,
+{
     use_hook(move || {
-        let i18n = I18nBundle::new(init());
+        let i18n = I18nBundle::new(init()?);
         provide_context(i18n.context);
         provide_context(i18n);
-        i18n
+        Ok(i18n)
     })
 }
 

@@ -6,6 +6,8 @@
 //!
 //! Parsing resources, composing fallbacks, and configuring the bundle remain the application's
 //! responsibility; the Dioxus adapter stores and reactively replaces the completed bundle.
+//! When that construction can fail, [`try_use_init_i18n_from_bundle`] returns the application-owned
+//! error unchanged and provides the Dioxus contexts only after construction succeeds.
 
 use dioxus::prelude::*;
 use dioxus_i18n::fluent::{FluentBundle, FluentResource};
