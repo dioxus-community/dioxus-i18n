@@ -65,3 +65,26 @@ fn app() -> Element {
 
     rsx! { Body {} }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn configured_bundle_formats_without_a_dioxus_root() {
+        // Application-owned Fluent configuration can be tested without mounting the Dioxus stack.
+        let bundle = create_bundle(langid!("en-US"), include_str!("./data/i18n/en-US.ftl"));
+        let message = bundle
+            .get_message("hello_world")
+            .expect("example bundle contains hello_world");
+        let pattern = message
+            .value()
+            .expect("hello_world contains a message value");
+        let mut errors = Vec::new();
+
+        let translation = bundle.format_pattern(pattern, None, &mut errors);
+
+        assert!(errors.is_empty(), "message formats without Fluent errors");
+        assert_eq!(translation, "Hello, World!");
+    }
+}
