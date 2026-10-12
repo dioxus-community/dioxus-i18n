@@ -10,7 +10,6 @@ i18n integration for Dioxus apps based on the [Project Fluent](https://github.co
 - Renderers:
   - [web](https://dioxuslabs.com/learn/0.7/guides/web/),
   - [desktop](https://dioxuslabs.com/learn/0.7/guides/desktop/),
-  - [freya](https://github.com/marc2332/freya)
 - Both WASM and native targets
 
 ## Example:
@@ -63,7 +62,6 @@ The examples folder contains a number of working examples:
 
 * Desktop examples:
   * [Dioxus](./examples/dioxus-desktop.rs)
-  * [Freya](./examples/freya.rs)
 * Configuration variants:
   * [Auto locales](./examples/config-auto-locales.rs)
   * [Dynamic (PathBuf)](./examples/config-dynamic-pathbuf.rs)
