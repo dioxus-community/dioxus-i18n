@@ -1,7 +1,7 @@
 mod common;
 use common::*;
 
-use dioxus_i18n::prelude::{use_init_i18n, I18n, I18nConfig};
+use dioxus_i18n::{use_init_i18n, I18n, I18nConfig};
 use unic_langid::{langid, LanguageIdentifier};
 
 #[test]

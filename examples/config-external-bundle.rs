@@ -11,8 +11,7 @@
 
 use dioxus::prelude::*;
 use dioxus_i18n::fluent::{FluentBundle, FluentResource};
-use dioxus_i18n::prelude::{i18n_bundle, use_init_i18n_from_bundle};
-use dioxus_i18n::t;
+use dioxus_i18n::{i18n_bundle, t, use_init_i18n_from_bundle};
 use unic_langid::{langid, LanguageIdentifier};
 
 fn main() {

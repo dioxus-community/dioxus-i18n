@@ -8,11 +8,11 @@
 //! hello = Hello, {$name}!
 //! ```
 
-/// Translate message from key, returning [`crate::prelude::DioxusI18nError`] if id not found...
+/// Translate message from key, returning [`crate::DioxusI18nError`] if id not found...
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
-/// # use dioxus_i18n::{te, prelude::*};
+/// # use dioxus_i18n::{te, use_init_i18n, I18nConfig};
 /// # use unic_langid::langid;
 /// # #[component]
 /// # fn Example() -> Element {
@@ -47,7 +47,7 @@ macro_rules! te {
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
-/// # use dioxus_i18n::{t, prelude::*};
+/// # use dioxus_i18n::{t, use_init_i18n, I18nConfig};
 /// # use unic_langid::langid;
 /// # #[component]
 /// # fn Example() -> Element {
@@ -76,7 +76,7 @@ macro_rules! t {
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
-/// # use dioxus_i18n::{tid, prelude::*};
+/// # use dioxus_i18n::{tid, use_init_i18n, I18nConfig};
 /// # use unic_langid::langid;
 /// # #[component]
 /// # fn Example() -> Element {

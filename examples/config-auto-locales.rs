@@ -2,8 +2,7 @@
 //! This is useful when you have a lot of locales and you don't want to manually add them.
 
 use dioxus::prelude::*;
-use dioxus_i18n::prelude::{i18n, use_init_i18n, I18nConfig};
-use dioxus_i18n::t;
+use dioxus_i18n::{i18n, t, use_init_i18n, I18nConfig};
 use unic_langid::langid;
 
 use std::path::PathBuf;

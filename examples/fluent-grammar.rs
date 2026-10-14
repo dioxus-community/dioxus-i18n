@@ -3,7 +3,7 @@
 //! This performs a lookup only, no additional translation files are provided
 
 use dioxus::prelude::*;
-use dioxus_i18n::{prelude::*, tid};
+use dioxus_i18n::{tid, use_init_i18n, I18nConfig};
 use unic_langid::langid;
 
 use std::path::PathBuf;

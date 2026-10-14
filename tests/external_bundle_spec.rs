@@ -4,8 +4,7 @@ use common::*;
 
 use dioxus::core::try_consume_context;
 use dioxus_i18n::{
-    prelude::{i18n_bundle, try_use_init_i18n_from_bundle, use_init_i18n_from_bundle, I18nBundle},
-    t,
+    i18n_bundle, t, try_use_init_i18n_from_bundle, use_init_i18n_from_bundle, I18nBundle,
 };
 use fluent::{FluentBundle, FluentResource};
 use unic_langid::{langid, LanguageIdentifier};
