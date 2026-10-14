@@ -4,8 +4,8 @@ Dioxus internationalization powered by [Project Fluent](https://github.com/proje
 
 ## Support
 
-- **Dioxus v0.7** 🧬
-- Dioxus [platform support](https://dioxuslabs.com/learn/0.7/guides/platforms/)
+- **Dioxus v0.8** 🧬
+- Dioxus [platform support](https://dioxuslabs.com/learn/0.8/guides/platforms/)
 
 ## Example:
 
