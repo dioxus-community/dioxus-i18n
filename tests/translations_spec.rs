@@ -3,8 +3,7 @@ use common::test_hook::test_hook_after_first_render;
 use common::*;
 
 use dioxus_i18n::{
-    prelude::{i18n, try_use_init_i18n, use_init_i18n, DioxusI18nError, I18n, I18nConfig},
-    t, te, tid,
+    i18n, t, te, tid, try_use_init_i18n, use_init_i18n, DioxusI18nError, I18n, I18nConfig,
 };
 use unic_langid::{langid, LanguageIdentifier};
 
