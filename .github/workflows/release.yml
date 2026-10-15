@@ -52,8 +52,17 @@ jobs:
         env:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
-          if [[ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]]; then
-            echo "Releases must be dispatched from $DEFAULT_BRANCH, not $GITHUB_REF." >&2
+          PACKAGE_ID="$(cargo pkgid)"
+          PACKAGE_VERSION="${PACKAGE_ID##*#}"
+          PACKAGE_VERSION="${PACKAGE_VERSION##*@}"
+          PACKAGE_VERSION="${PACKAGE_VERSION##*:}"
+          VERSION_TAIL="${PACKAGE_VERSION#*.}"
+          RELEASE_BRANCH="v${PACKAGE_VERSION%%.*}.${VERSION_TAIL%%.*}"
+
+          if [[ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" &&
+                "$GITHUB_REF" != "refs/heads/$RELEASE_BRANCH" ]]; then
+            echo "Releases for $PACKAGE_VERSION must be dispatched from" \
+              "$DEFAULT_BRANCH or $RELEASE_BRANCH, not $GITHUB_REF." >&2
             exit 1
           fi
 
