@@ -9,7 +9,7 @@
 
 ### Changed
 
-- Updated the Dioxus dependency floor to `0.8.0-alpha.1`, allowing later compatible Dioxus 0.8
+- Updated the Dioxus dependency floor to `0.8.0-alpha.0`, allowing later compatible Dioxus 0.8
   releases.
 - Updated examples and documentation to use the simpler crate-root imports.
 
