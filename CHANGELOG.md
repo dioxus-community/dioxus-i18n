@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.7.0-alpha.1] 2026-10-15
+
+### Added
+
+- Re-exported the complete i18n API from the crate root. Existing
+  `dioxus_i18n::prelude` imports remain supported.
+
+### Changed
+
+- Updated the Dioxus dependency floor to `0.8.0-alpha.1`, allowing later compatible Dioxus 0.8
+  releases.
+- Updated examples and documentation to use the simpler crate-root imports.
+
+### Breaking
+
+- Dropped support for Dioxus 0.7. Consumers must upgrade to Dioxus 0.8.
+
 ## [0.6.0] 2026-10-12
 
 ### Added
